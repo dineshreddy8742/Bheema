@@ -61,7 +61,27 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
+				},
+				// Project Kisan farming theme colors
+				farm: {
+					soil: 'hsl(var(--farm-soil))',
+					leaf: 'hsl(var(--farm-leaf))',
+					sun: 'hsl(var(--farm-sun))',
+					sky: 'hsl(var(--farm-sky))'
 				}
+			},
+			fontFamily: {
+				primary: 'var(--font-primary)',
+				indian: 'var(--font-indian)'
+			},
+			boxShadow: {
+				soft: 'var(--shadow-soft)',
+				glow: 'var(--shadow-glow)',
+				card: 'var(--shadow-card)'
+			},
+			backgroundImage: {
+				'rural-gradient': 'linear-gradient(135deg, hsl(var(--rural-gradient-start)), hsl(var(--rural-gradient-middle)) 50%, hsl(var(--rural-gradient-end)))',
+				'farm-gradient': 'linear-gradient(135deg, hsl(var(--farm-leaf)), hsl(var(--farm-sun)) 50%, hsl(var(--farm-sky)))'
 			},
 			borderRadius: {
 				lg: 'var(--radius)',
@@ -84,11 +104,31 @@ export default {
 					to: {
 						height: '0'
 					}
+				},
+				'bounce-gentle': {
+					'0%, 100%': { transform: 'translateY(0)' },
+					'50%': { transform: 'translateY(-8px)' }
+				},
+				'pulse-soft': {
+					'0%, 100%': { opacity: '1', transform: 'scale(1)' },
+					'50%': { opacity: '0.8', transform: 'scale(1.05)' }
+				},
+				'float': {
+					'0%, 100%': { transform: 'translateY(0px)' },
+					'50%': { transform: 'translateY(-10px)' }
+				},
+				'ripple': {
+					'0%': { transform: 'scale(0)', opacity: '1' },
+					'100%': { transform: 'scale(4)', opacity: '0' }
 				}
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
-				'accordion-up': 'accordion-up 0.2s ease-out'
+				'accordion-up': 'accordion-up 0.2s ease-out',
+				'bounce-gentle': 'bounce-gentle 2s infinite',
+				'pulse-soft': 'pulse-soft 2s infinite',
+				'float': 'float 3s ease-in-out infinite',
+				'ripple': 'ripple 0.6s linear'
 			}
 		}
 	},

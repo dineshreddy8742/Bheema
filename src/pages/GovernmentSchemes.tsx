@@ -1,0 +1,490 @@
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Layout } from '@/components/Layout';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { 
+  Building2, 
+  Mic,
+  Search,
+  ExternalLink,
+  CheckCircle,
+  Clock,
+  MapPin,
+  Phone,
+  FileText,
+  Users,
+  Banknote
+} from 'lucide-react';
+
+const GovernmentSchemes = () => {
+  const [query, setQuery] = useState('');
+  const [isListening, setIsListening] = useState(false);
+  const [selectedScheme, setSelectedScheme] = useState<string | null>(null);
+
+  const schemes = [
+    {
+      id: 'drip-irrigation',
+      name: 'Drip Irrigation Subsidy',
+      category: 'Water Management',
+      subsidy: '90%',
+      maxAmount: '₹1,50,000',
+      status: 'active',
+      deadline: '2024-03-31',
+      eligibility: [
+        'Small and marginal farmers',
+        'Minimum 0.5 acre land',
+        'Valid land documents',
+        'Bank account linked to Aadhaar'
+      ],
+      documents: [
+        'Land ownership certificate',
+        'Aadhaar card',
+        'Bank passbook',
+        'Passport size photographs'
+      ],
+      benefits: [
+        'Up to 90% subsidy on drip irrigation systems',
+        'Water conservation technology',
+        'Increased crop yield',
+        'Reduced labor costs'
+      ],
+      applicationProcess: [
+        'Visit nearest agriculture office',
+        'Submit required documents',
+        'Get technical evaluation done',
+        'Receive approval and subsidy'
+      ]
+    },
+    {
+      id: 'solar-pump',
+      name: 'Solar Water Pump Scheme',
+      category: 'Renewable Energy',
+      subsidy: '75%',
+      maxAmount: '₹2,00,000',
+      status: 'active',
+      deadline: '2024-04-15',
+      eligibility: [
+        'Farmers with irrigation needs',
+        'Grid connection not available',
+        'Minimum 1 acre farmland',
+        'No existing subsidy availed'
+      ],
+      documents: [
+        'Land records',
+        'Income certificate',
+        'Aadhaar card',
+        'Bank account details'
+      ],
+      benefits: [
+        '75% subsidy on solar pump installation',
+        'Free electricity for 25 years',
+        'Environmentally friendly',
+        'Low maintenance costs'
+      ],
+      applicationProcess: [
+        'Apply online at government portal',
+        'Upload necessary documents',
+        'Site inspection by officials',
+        'Installation after approval'
+      ]
+    },
+    {
+      id: 'crop-insurance',
+      name: 'Pradhan Mantri Fasal Bima Yojana',
+      category: 'Insurance',
+      subsidy: '98%',
+      maxAmount: 'Based on crop value',
+      status: 'active',
+      deadline: 'Before sowing season',
+      eligibility: [
+        'All farmers including sharecroppers',
+        'Enrolled in land records',
+        'Growing notified crops',
+        'Premium payment before deadline'
+      ],
+      documents: [
+        'Land documents or agreement',
+        'Aadhaar card',
+        'Bank account details',
+        'Sowing certificate'
+      ],
+      benefits: [
+        'Protection against crop loss',
+        '98% premium subsidy',
+        'Quick claim settlement',
+        'Coverage for natural calamities'
+      ],
+      applicationProcess: [
+        'Enroll through bank or CSC',
+        'Pay minimal premium',
+        'Report loss within 72 hours',
+        'Receive compensation'
+      ]
+    }
+  ];
+
+  const helpCenters = [
+    {
+      name: 'Bangalore Agriculture Office',
+      address: 'Vidhana Soudha, Bangalore',
+      phone: '+91-80-2234-5678',
+      distance: '12 km'
+    },
+    {
+      name: 'Krishi Vigyan Kendra',
+      address: 'UAS Campus, Hebbal',
+      phone: '+91-80-2345-6789',
+      distance: '8 km'
+    },
+    {
+      name: 'District Collector Office',
+      address: 'Mini Vidhana Soudha',
+      phone: '+91-80-3456-7890',
+      distance: '15 km'
+    }
+  ];
+
+  const handleVoiceQuery = () => {
+    setIsListening(true);
+    setTimeout(() => {
+      setQuery('ಡ್ರಿಪ್ ಇರಿಗೇಶನ್ ಸಬ್ಸಿಡಿ ಬಗ್ಗೆ ಹೇಳಿ'); // "Tell me about drip irrigation subsidy"
+      setIsListening(false);
+      setSelectedScheme('drip-irrigation');
+    }, 2000);
+  };
+
+  return (
+    <Layout>
+      <div className="space-y-6">
+        {/* Header */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center"
+        >
+          <h1 className="text-hero text-primary font-indian mb-2">
+            🏛️ ಸರ್ಕಾರಿ ಯೋಜನೆಗಳು
+          </h1>
+          <p className="text-lg text-muted-foreground">
+            Government schemes and subsidies for farmers
+          </p>
+        </motion.div>
+
+        {/* Voice Query Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+        >
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <Mic className="h-5 w-5 text-primary" />
+                <span>Ask About Schemes</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex space-x-2">
+                <div className="flex-1 relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                  <Input
+                    placeholder="Ask: ಡ್ರಿಪ್ ಇರಿಗೇಶನ್ ಸಬ್ಸಿಡಿ ಬಗ್ಗೆ ಹೇಳಿ (Tell me about drip irrigation subsidy)"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+                <Button
+                  onClick={handleVoiceQuery}
+                  disabled={isListening}
+                  className={`voice-button h-auto px-4 ${isListening ? 'animate-pulse-soft' : ''}`}
+                >
+                  {isListening ? (
+                    <motion.div
+                      animate={{ scale: [1, 1.2, 1] }}
+                      transition={{ duration: 0.5, repeat: Infinity }}
+                    >
+                      <Mic className="h-4 w-4" />
+                    </motion.div>
+                  ) : (
+                    <Mic className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                {['Subsidy', 'Loan', 'Insurance', 'Seeds'].map((topic) => (
+                  <Button
+                    key={topic}
+                    variant="outline"
+                    size="sm"
+                    className="text-xs"
+                  >
+                    {topic} Schemes
+                  </Button>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* Schemes Grid */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6"
+        >
+          {schemes.map((scheme, index) => (
+            <motion.div
+              key={scheme.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.1 }}
+              whileHover={{ scale: 1.02 }}
+              className="cursor-pointer"
+              onClick={() => setSelectedScheme(scheme.id)}
+            >
+              <Card className={`h-full hover:shadow-glow transition-all ${
+                selectedScheme === scheme.id ? 'ring-2 ring-accent' : ''
+              }`}>
+                <CardHeader>
+                  <div className="flex items-center justify-between mb-2">
+                    <Badge variant="secondary" className="text-xs">
+                      {scheme.category}
+                    </Badge>
+                    <Badge variant={scheme.status === 'active' ? 'default' : 'destructive'}>
+                      {scheme.status === 'active' ? 'Active' : 'Closed'}
+                    </Badge>
+                  </div>
+                  <CardTitle className="text-lg">{scheme.name}</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Subsidy</p>
+                      <p className="font-bold text-green-600">{scheme.subsidy}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Max Amount</p>
+                      <p className="font-bold text-primary">{scheme.maxAmount}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center space-x-2 text-sm">
+                    <Clock className="h-4 w-4 text-muted-foreground" />
+                    <span>Deadline: {scheme.deadline}</span>
+                  </div>
+
+                  <div className="pt-2">
+                    <Button variant="outline" className="w-full" size="sm">
+                      View Details
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          ))}
+        </motion.div>
+
+        {/* Selected Scheme Details */}
+        <AnimatePresence>
+          {selectedScheme && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="space-y-6"
+            >
+              {(() => {
+                const scheme = schemes.find(s => s.id === selectedScheme);
+                if (!scheme) return null;
+
+                return (
+                  <Card className="border-accent shadow-glow">
+                    <CardHeader>
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-xl">{scheme.name}</CardTitle>
+                        <div className="flex space-x-2">
+                          <Badge variant="secondary">{scheme.category}</Badge>
+                          <Badge className="bg-green-500">{scheme.subsidy} Subsidy</Badge>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <Accordion type="single" collapsible className="w-full">
+                        <AccordionItem value="eligibility">
+                          <AccordionTrigger className="flex items-center space-x-2">
+                            <Users className="h-4 w-4" />
+                            <span>Eligibility Criteria</span>
+                          </AccordionTrigger>
+                          <AccordionContent>
+                            <ul className="space-y-2">
+                              {scheme.eligibility.map((criteria, index) => (
+                                <motion.li
+                                  key={index}
+                                  initial={{ opacity: 0, x: -10 }}
+                                  animate={{ opacity: 1, x: 0 }}
+                                  transition={{ delay: index * 0.1 }}
+                                  className="flex items-start space-x-2"
+                                >
+                                  <CheckCircle className="h-4 w-4 text-green-500 mt-0.5" />
+                                  <span className="text-sm">{criteria}</span>
+                                </motion.li>
+                              ))}
+                            </ul>
+                          </AccordionContent>
+                        </AccordionItem>
+
+                        <AccordionItem value="documents">
+                          <AccordionTrigger className="flex items-center space-x-2">
+                            <FileText className="h-4 w-4" />
+                            <span>Required Documents</span>
+                          </AccordionTrigger>
+                          <AccordionContent>
+                            <ul className="space-y-2">
+                              {scheme.documents.map((doc, index) => (
+                                <motion.li
+                                  key={index}
+                                  initial={{ opacity: 0, x: -10 }}
+                                  animate={{ opacity: 1, x: 0 }}
+                                  transition={{ delay: index * 0.1 }}
+                                  className="flex items-start space-x-2"
+                                >
+                                  <div className="w-4 h-4 bg-accent rounded-full mt-0.5" />
+                                  <span className="text-sm">{doc}</span>
+                                </motion.li>
+                              ))}
+                            </ul>
+                          </AccordionContent>
+                        </AccordionItem>
+
+                        <AccordionItem value="benefits">
+                          <AccordionTrigger className="flex items-center space-x-2">
+                            <Banknote className="h-4 w-4" />
+                            <span>Benefits</span>
+                          </AccordionTrigger>
+                          <AccordionContent>
+                            <ul className="space-y-2">
+                              {scheme.benefits.map((benefit, index) => (
+                                <motion.li
+                                  key={index}
+                                  initial={{ opacity: 0, x: -10 }}
+                                  animate={{ opacity: 1, x: 0 }}
+                                  transition={{ delay: index * 0.1 }}
+                                  className="flex items-start space-x-2"
+                                >
+                                  <div className="w-4 h-4 bg-primary rounded-full mt-0.5" />
+                                  <span className="text-sm">{benefit}</span>
+                                </motion.li>
+                              ))}
+                            </ul>
+                          </AccordionContent>
+                        </AccordionItem>
+
+                        <AccordionItem value="process">
+                          <AccordionTrigger className="flex items-center space-x-2">
+                            <Building2 className="h-4 w-4" />
+                            <span>Application Process</span>
+                          </AccordionTrigger>
+                          <AccordionContent>
+                            <ol className="space-y-2">
+                              {scheme.applicationProcess.map((step, index) => (
+                                <motion.li
+                                  key={index}
+                                  initial={{ opacity: 0, x: -10 }}
+                                  animate={{ opacity: 1, x: 0 }}
+                                  transition={{ delay: index * 0.1 }}
+                                  className="flex items-start space-x-3"
+                                >
+                                  <div className="w-6 h-6 bg-secondary text-secondary-foreground rounded-full flex items-center justify-center text-xs font-medium">
+                                    {index + 1}
+                                  </div>
+                                  <span className="text-sm">{step}</span>
+                                </motion.li>
+                              ))}
+                            </ol>
+                          </AccordionContent>
+                        </AccordionItem>
+                      </Accordion>
+
+                      <div className="mt-6 flex space-x-4">
+                        <Button className="flex-1 bg-accent hover:bg-accent/90">
+                          <ExternalLink className="h-4 w-4 mr-2" />
+                          Apply Now
+                        </Button>
+                        <Button variant="outline" className="flex-1">
+                          Download Form
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })()}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Help Centers */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+        >
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <MapPin className="h-5 w-5 text-primary" />
+                <span>Nearest Help Centers</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {helpCenters.map((center, index) => (
+                  <motion.div
+                    key={center.name}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                    className="flex items-start justify-between p-4 bg-accent/5 rounded-lg hover:bg-accent/10 transition-colors"
+                  >
+                    <div className="flex-1">
+                      <h4 className="font-medium">{center.name}</h4>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {center.address}
+                      </p>
+                      <div className="flex items-center space-x-4 mt-2">
+                        <div className="flex items-center space-x-1">
+                          <Phone className="h-3 w-3 text-muted-foreground" />
+                          <span className="text-xs">{center.phone}</span>
+                        </div>
+                        <div className="flex items-center space-x-1">
+                          <MapPin className="h-3 w-3 text-muted-foreground" />
+                          <span className="text-xs">{center.distance}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex flex-col space-y-2">
+                      <Button variant="outline" size="sm">
+                        Call
+                      </Button>
+                      <Button variant="outline" size="sm">
+                        Directions
+                      </Button>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      </div>
+    </Layout>
+  );
+};
+
+export default GovernmentSchemes;
