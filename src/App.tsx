@@ -8,6 +8,7 @@ import CropMonitor from "./pages/CropMonitor";
 import DiseaseDetector from "./pages/DiseaseDetector";
 import MarketTrends from "./pages/MarketTrends";
 import GovernmentSchemes from "./pages/GovernmentSchemes";
+import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -24,6 +25,7 @@ const App = () => (
           <Route path="/disease-detector" element={<DiseaseDetector />} />
           <Route path="/market-trends" element={<MarketTrends />} />
           <Route path="/government-schemes" element={<GovernmentSchemes />} />
+          <Route path="/settings" element={<Settings />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

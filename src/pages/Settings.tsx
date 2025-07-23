@@ -1,0 +1,417 @@
+import React, { useState } from 'react';
+import { motion } from 'framer-motion';
+import { Layout } from '@/components/Layout';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Separator } from '@/components/ui/separator';
+import { Badge } from '@/components/ui/badge';
+import { toast } from 'sonner';
+import {
+  Globe,
+  Bell,
+  Mic,
+  MapPin,
+  User,
+  Palette,
+  Save,
+  Volume2,
+  Smartphone,
+  Shield
+} from 'lucide-react';
+
+const Settings = () => {
+  const [settings, setSettings] = useState({
+    language: 'kannada',
+    notifications: {
+      cropAlerts: true,
+      priceUpdates: true,
+      weatherWarnings: true,
+      schemeUpdates: false
+    },
+    voice: {
+      enabled: true,
+      language: 'kannada',
+      speed: 'normal'
+    },
+    location: {
+      autoDetect: true,
+      city: 'Bangalore',
+      state: 'Karnataka'
+    },
+    profile: {
+      name: 'Farmer Krishna',
+      farmSize: '5 acres',
+      mainCrops: 'Rice, Tomato'
+    },
+    theme: 'light'
+  });
+
+  const handleSave = () => {
+    toast.success('Settings saved successfully!');
+  };
+
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1
+      }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: {
+      y: 0,
+      opacity: 1,
+      transition: { duration: 0.5 }
+    }
+  };
+
+  return (
+    <Layout>
+      <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-accent/5">
+        <div className="container mx-auto px-4 py-8">
+          <motion.div
+            initial="hidden"
+            animate="visible"
+            variants={containerVariants}
+            className="max-w-4xl mx-auto space-y-8"
+          >
+            {/* Header */}
+            <motion.div variants={itemVariants} className="text-center space-y-4">
+              <h1 className="text-4xl font-bold bg-gradient-to-r from-primary via-accent to-primary/80 bg-clip-text text-transparent font-indian">
+                Settings
+              </h1>
+              <p className="text-muted-foreground text-lg">
+                Customize your Project Kisan experience
+              </p>
+            </motion.div>
+
+            {/* Profile Section */}
+            <motion.div variants={itemVariants}>
+              <Card className="border-accent/20 shadow-soft">
+                <CardHeader className="space-y-1">
+                  <div className="flex items-center space-x-3">
+                    <User className="h-6 w-6 text-primary" />
+                    <CardTitle className="text-xl font-indian">Profile Information</CardTitle>
+                  </div>
+                  <CardDescription>
+                    Manage your farming profile and basic information
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="flex items-center space-x-4">
+                    <Avatar className="h-20 w-20">
+                      <AvatarImage src="/src/assets/farmer-avatar.png" alt="Profile" />
+                      <AvatarFallback className="bg-primary/20 text-primary font-bold text-lg">
+                        FK
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="space-y-2">
+                      <h3 className="text-lg font-semibold">{settings.profile.name}</h3>
+                      <div className="flex space-x-2">
+                        <Badge variant="secondary">{settings.profile.farmSize}</Badge>
+                        <Badge variant="outline">{settings.profile.mainCrops}</Badge>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="name">Full Name</Label>
+                      <Input
+                        id="name"
+                        value={settings.profile.name}
+                        onChange={(e) => setSettings(prev => ({
+                          ...prev,
+                          profile: { ...prev.profile, name: e.target.value }
+                        }))}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="farmSize">Farm Size</Label>
+                      <Input
+                        id="farmSize"
+                        value={settings.profile.farmSize}
+                        onChange={(e) => setSettings(prev => ({
+                          ...prev,
+                          profile: { ...prev.profile, farmSize: e.target.value }
+                        }))}
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            {/* Language Settings */}
+            <motion.div variants={itemVariants}>
+              <Card className="border-accent/20 shadow-soft">
+                <CardHeader className="space-y-1">
+                  <div className="flex items-center space-x-3">
+                    <Globe className="h-6 w-6 text-primary" />
+                    <CardTitle className="text-xl font-indian">Language & Region</CardTitle>
+                  </div>
+                  <CardDescription>
+                    Choose your preferred language and regional settings
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-3">
+                      <Label htmlFor="language">App Language</Label>
+                      <Select
+                        value={settings.language}
+                        onValueChange={(value) => setSettings(prev => ({ ...prev, language: value }))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select language" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="kannada">ಕನ್ನಡ (Kannada)</SelectItem>
+                          <SelectItem value="hindi">हिन्दी (Hindi)</SelectItem>
+                          <SelectItem value="english">English</SelectItem>
+                          <SelectItem value="tamil">தமிழ் (Tamil)</SelectItem>
+                          <SelectItem value="telugu">తెలుగు (Telugu)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div className="space-y-3">
+                      <Label htmlFor="voiceLang">Voice Language</Label>
+                      <Select
+                        value={settings.voice.language}
+                        onValueChange={(value) => setSettings(prev => ({
+                          ...prev,
+                          voice: { ...prev.voice, language: value }
+                        }))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select voice language" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="kannada">ಕನ್ನಡ (Kannada)</SelectItem>
+                          <SelectItem value="hindi">हिन्दी (Hindi)</SelectItem>
+                          <SelectItem value="english">English</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            {/* Voice Assistant Settings */}
+            <motion.div variants={itemVariants}>
+              <Card className="border-accent/20 shadow-soft">
+                <CardHeader className="space-y-1">
+                  <div className="flex items-center space-x-3">
+                    <Mic className="h-6 w-6 text-primary" />
+                    <CardTitle className="text-xl font-indian">Voice Assistant</CardTitle>
+                  </div>
+                  <CardDescription>
+                    Configure voice interaction preferences
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-1">
+                      <Label className="text-base font-medium">Enable Voice Assistant</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Allow voice commands and responses
+                      </p>
+                    </div>
+                    <Switch
+                      checked={settings.voice.enabled}
+                      onCheckedChange={(checked) => setSettings(prev => ({
+                        ...prev,
+                        voice: { ...prev.voice, enabled: checked }
+                      }))}
+                    />
+                  </div>
+                  
+                  <Separator />
+                  
+                  <div className="space-y-3">
+                    <Label htmlFor="voiceSpeed">Speech Speed</Label>
+                    <Select
+                      value={settings.voice.speed}
+                      onValueChange={(value) => setSettings(prev => ({
+                        ...prev,
+                        voice: { ...prev.voice, speed: value }
+                      }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select speed" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="slow">
+                          <div className="flex items-center space-x-2">
+                            <Volume2 className="h-4 w-4" />
+                            <span>Slow</span>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="normal">
+                          <div className="flex items-center space-x-2">
+                            <Volume2 className="h-4 w-4" />
+                            <span>Normal</span>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="fast">
+                          <div className="flex items-center space-x-2">
+                            <Volume2 className="h-4 w-4" />
+                            <span>Fast</span>
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            {/* Notification Settings */}
+            <motion.div variants={itemVariants}>
+              <Card className="border-accent/20 shadow-soft">
+                <CardHeader className="space-y-1">
+                  <div className="flex items-center space-x-3">
+                    <Bell className="h-6 w-6 text-primary" />
+                    <CardTitle className="text-xl font-indian">Notifications</CardTitle>
+                  </div>
+                  <CardDescription>
+                    Manage when and how you receive alerts
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="space-y-4">
+                    {[
+                      {
+                        key: 'cropAlerts',
+                        title: 'Crop Health Alerts',
+                        description: 'Get notified about crop diseases and health issues'
+                      },
+                      {
+                        key: 'priceUpdates',
+                        title: 'Market Price Updates',
+                        description: 'Receive alerts when crop prices change significantly'
+                      },
+                      {
+                        key: 'weatherWarnings',
+                        title: 'Weather Warnings',
+                        description: 'Get alerts for severe weather conditions'
+                      },
+                      {
+                        key: 'schemeUpdates',
+                        title: 'Government Scheme Updates',
+                        description: 'Stay informed about new agricultural schemes'
+                      }
+                    ].map((item) => (
+                      <div key={item.key} className="flex items-center justify-between">
+                        <div className="space-y-1">
+                          <Label className="text-base font-medium">{item.title}</Label>
+                          <p className="text-sm text-muted-foreground">
+                            {item.description}
+                          </p>
+                        </div>
+                        <Switch
+                          checked={settings.notifications[item.key as keyof typeof settings.notifications]}
+                          onCheckedChange={(checked) => setSettings(prev => ({
+                            ...prev,
+                            notifications: {
+                              ...prev.notifications,
+                              [item.key]: checked
+                            }
+                          }))}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            {/* Location Settings */}
+            <motion.div variants={itemVariants}>
+              <Card className="border-accent/20 shadow-soft">
+                <CardHeader className="space-y-1">
+                  <div className="flex items-center space-x-3">
+                    <MapPin className="h-6 w-6 text-primary" />
+                    <CardTitle className="text-xl font-indian">Location Settings</CardTitle>
+                  </div>
+                  <CardDescription>
+                    Manage location preferences for weather and market data
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-1">
+                      <Label className="text-base font-medium">Auto-detect Location</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Automatically use your current location for accurate data
+                      </p>
+                    </div>
+                    <Switch
+                      checked={settings.location.autoDetect}
+                      onCheckedChange={(checked) => setSettings(prev => ({
+                        ...prev,
+                        location: { ...prev.location, autoDetect: checked }
+                      }))}
+                    />
+                  </div>
+                  
+                  {!settings.location.autoDetect && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="city">City</Label>
+                        <Input
+                          id="city"
+                          value={settings.location.city}
+                          onChange={(e) => setSettings(prev => ({
+                            ...prev,
+                            location: { ...prev.location, city: e.target.value }
+                          }))}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="state">State</Label>
+                        <Input
+                          id="state"
+                          value={settings.location.state}
+                          onChange={(e) => setSettings(prev => ({
+                            ...prev,
+                            location: { ...prev.location, state: e.target.value }
+                          }))}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            {/* Save Button */}
+            <motion.div variants={itemVariants} className="flex justify-center">
+              <Button
+                onClick={handleSave}
+                size="lg"
+                className="bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-primary-foreground shadow-soft px-8 py-3"
+              >
+                <Save className="h-5 w-5 mr-2" />
+                Save Settings
+              </Button>
+            </motion.div>
+          </motion.div>
+        </div>
+      </div>
+    </Layout>
+  );
+};
+
+export default Settings;
