@@ -1,7 +1,9 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { 
   Thermometer, 
   Droplets, 
@@ -10,40 +12,61 @@ import {
   TrendingUp,
   TrendingDown,
   AlertTriangle,
-  CheckCircle
+  CheckCircle,
+  Cloud,
+  CloudRain,
+  Zap
 } from 'lucide-react';
 
 export const Dashboard: React.FC = () => {
-  const sensorData = [
+  const navigate = useNavigate();
+  const { translate } = useLanguage();
+
+  const weatherData = [
     {
       label: 'Temperature',
       value: '28°C',
       icon: Thermometer,
       status: 'good',
-      description: 'Optimal for crops'
+      description: 'Optimal temperature',
+      condition: 'sunny'
     },
     {
-      label: 'Soil Moisture',
-      value: '45%',
-      icon: Droplets,
-      status: 'warning',
-      description: 'Needs irrigation'
-    },
-    {
-      label: 'Sunlight',
-      value: '8.5 hrs',
+      label: 'Light Intensity',
+      value: '850 lux',
       icon: Sun,
       status: 'good',
-      description: 'Excellent exposure'
+      description: 'Excellent sunlight',
+      condition: 'sunny'
     },
     {
-      label: 'Wind Speed',
-      value: '12 km/h',
-      icon: Wind,
+      label: 'Humidity',
+      value: '65%',
+      icon: Droplets,
       status: 'good',
-      description: 'Light breeze'
+      description: 'Ideal moisture',
+      condition: 'normal'
+    },
+    {
+      label: 'Weather',
+      value: 'Partly Cloudy',
+      icon: Cloud,
+      status: 'good',
+      description: 'Perfect for farming',
+      condition: 'cloudy'
     }
   ];
+
+  const quickActions = [
+    { title: translate('crop_monitor'), emoji: '🌾', color: 'bg-primary', route: '/crop-monitor' },
+    { title: translate('disease_check'), emoji: '🦠', color: 'bg-secondary', route: '/disease-detector' },
+    { title: translate('market_price'), emoji: '📈', color: 'bg-accent', route: '/market-trends' },
+    { title: translate('gov_schemes'), emoji: '🏛️', color: 'bg-farm-leaf', route: '/government-schemes' }
+  ];
+
+  const handleQuickAction = (route: string) => {
+    navigate(route);
+  };
 
   const marketData = [
     {
@@ -114,71 +137,109 @@ export const Dashboard: React.FC = () => {
         transition={{ duration: 0.5, delay: 0.1 }}
         className="grid grid-cols-2 md:grid-cols-4 gap-4"
       >
-        {[
-          { title: 'Crop Monitor', emoji: '🌾', color: 'bg-primary' },
-          { title: 'Disease Check', emoji: '🦠', color: 'bg-secondary' },
-          { title: 'Market Price', emoji: '📈', color: 'bg-accent' },
-          { title: 'Gov Schemes', emoji: '🏛️', color: 'bg-farm-leaf' }
-        ].map((action, index) => (
+        {quickActions.map((action, index) => (
           <motion.div
             key={action.title}
-            whileHover={{ scale: 1.05 }}
+            whileHover={{ 
+              scale: 1.05,
+              rotate: [0, -1, 1, 0],
+              transition: { duration: 0.3 }
+            }}
             whileTap={{ scale: 0.95 }}
             className="cursor-pointer"
+            onClick={() => handleQuickAction(action.route)}
           >
-            <Card className="text-center p-4 hover:shadow-glow transition-all">
-              <div className={`w-12 h-12 ${action.color} rounded-full flex items-center justify-center mx-auto mb-2 text-white text-xl`}>
+            <Card className="text-center p-4 hover:shadow-glow hover:bg-gradient-to-br hover:from-background hover:to-accent/5 transition-all duration-300 group">
+              <motion.div 
+                className={`w-12 h-12 ${action.color} rounded-full flex items-center justify-center mx-auto mb-2 text-white text-xl group-hover:scale-110 transition-transform duration-300`}
+                whileHover={{ rotate: 360 }}
+                transition={{ duration: 0.6 }}
+              >
                 {action.emoji}
-              </div>
-              <p className="text-sm font-medium">{action.title}</p>
+              </motion.div>
+              <p className="text-sm font-medium group-hover:text-primary transition-colors">
+                {action.title}
+              </p>
             </Card>
           </motion.div>
         ))}
       </motion.div>
 
-      {/* Sensor Data */}
+      {/* Weather Daily Forecast */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.2 }}
       >
-        <h2 className="text-section-title text-primary mb-4 font-indian">
-          🌾 Crop Health Monitor
+        <h2 className="text-section-title text-primary mb-4 font-indian flex items-center gap-2">
+          🌤️ {translate('weather_forecast')}
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+          >
+            <Sun className="h-6 w-6 text-yellow-500" />
+          </motion.div>
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {sensorData.map((sensor, index) => {
-            const Icon = sensor.icon;
+          {weatherData.map((weather, index) => {
+            const Icon = weather.icon;
+            const getWeatherIcon = () => {
+              switch (weather.condition) {
+                case 'sunny': return <Sun className="h-4 w-4 text-yellow-500" />;
+                case 'cloudy': return <Cloud className="h-4 w-4 text-gray-500" />;
+                case 'rainy': return <CloudRain className="h-4 w-4 text-blue-500" />;
+                default: return <CheckCircle className="h-4 w-4 text-green-500" />;
+              }
+            };
+            
             return (
               <motion.div
-                key={sensor.label}
+                key={weather.label}
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.3, delay: index * 0.1 }}
+                whileHover={{ 
+                  y: -5,
+                  transition: { duration: 0.2 }
+                }}
               >
-                <Card className="hover:shadow-soft transition-all">
+                <Card className="hover:shadow-elegant hover:border-primary/20 transition-all duration-300 bg-gradient-to-br from-background to-accent/5">
                   <CardHeader className="pb-2">
                     <div className="flex items-center justify-between">
-                      <Icon className={`h-5 w-5 ${
-                        sensor.status === 'good' ? 'text-green-500' :
-                        sensor.status === 'warning' ? 'text-orange-500' :
-                        'text-red-500'
-                      }`} />
-                      {sensor.status === 'good' ? (
-                        <CheckCircle className="h-4 w-4 text-green-500" />
-                      ) : (
-                        <AlertTriangle className="h-4 w-4 text-orange-500" />
-                      )}
+                      <motion.div
+                        whileHover={{ scale: 1.2, rotate: 15 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        <Icon className={`h-5 w-5 ${
+                          weather.status === 'good' ? 'text-green-500' :
+                          weather.status === 'warning' ? 'text-orange-500' :
+                          'text-red-500'
+                        }`} />
+                      </motion.div>
+                      <motion.div
+                        animate={{ 
+                          scale: [1, 1.1, 1],
+                          opacity: [1, 0.8, 1]
+                        }}
+                        transition={{ 
+                          duration: 2, 
+                          repeat: Infinity,
+                          delay: index * 0.5
+                        }}
+                      >
+                        {getWeatherIcon()}
+                      </motion.div>
                     </div>
                     <CardTitle className="text-sm text-muted-foreground">
-                      {sensor.label}
+                      {weather.label}
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold text-primary mb-1">
-                      {sensor.value}
+                      {weather.value}
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      {sensor.description}
+                      {weather.description}
                     </p>
                   </CardContent>
                 </Card>
