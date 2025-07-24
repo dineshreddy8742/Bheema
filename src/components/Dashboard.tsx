@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useWeather } from '@/hooks/useWeather';
 import { 
   Thermometer, 
   Droplets, 
@@ -15,47 +16,17 @@ import {
   CheckCircle,
   Cloud,
   CloudRain,
-  Zap
+  CloudSnow,
+  Zap,
+  Eye,
+  Gauge,
+  RefreshCw
 } from 'lucide-react';
 
 export const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   const { translate } = useLanguage();
-
-  const weatherData = [
-    {
-      label: 'Temperature',
-      value: '28°C',
-      icon: Thermometer,
-      status: 'good',
-      description: 'Optimal temperature',
-      condition: 'sunny'
-    },
-    {
-      label: 'Light Intensity',
-      value: '850 lux',
-      icon: Sun,
-      status: 'good',
-      description: 'Excellent sunlight',
-      condition: 'sunny'
-    },
-    {
-      label: 'Humidity',
-      value: '65%',
-      icon: Droplets,
-      status: 'good',
-      description: 'Ideal moisture',
-      condition: 'normal'
-    },
-    {
-      label: 'Weather',
-      value: 'Partly Cloudy',
-      icon: Cloud,
-      status: 'good',
-      description: 'Perfect for farming',
-      condition: 'cloudy'
-    }
-  ];
+  const { weatherData, loading, error, refetch } = useWeather();
 
   const quickActions = [
     { title: translate('crop_monitor'), emoji: '🌾', color: 'bg-primary', route: '/crop-monitor' },
@@ -170,83 +141,248 @@ export const Dashboard: React.FC = () => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.2 }}
+        className="space-y-6"
       >
-        <h2 className="text-section-title text-primary mb-4 font-indian flex items-center gap-2">
-          🌤️ {translate('weather_forecast')}
-          <motion.div
-            animate={{ rotate: 360 }}
-            transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+        {/* Header with Refresh */}
+        <div className="flex items-center justify-between">
+          <h2 className="text-section-title text-primary font-indian flex items-center gap-2">
+            🌤️ {translate('weather_forecast')}
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+            >
+              <Sun className="h-6 w-6 text-yellow-500" />
+            </motion.div>
+          </h2>
+          <motion.button
+            onClick={refetch}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className="p-2 rounded-full bg-accent/10 hover:bg-accent/20 transition-colors"
+            disabled={loading}
           >
-            <Sun className="h-6 w-6 text-yellow-500" />
+            <RefreshCw className={`h-4 w-4 text-primary ${loading ? 'animate-spin' : ''}`} />
+          </motion.button>
+        </div>
+
+        {loading && (
+          <div className="text-center py-8">
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+              className="inline-block"
+            >
+              <Sun className="h-8 w-8 text-primary" />
+            </motion.div>
+            <p className="mt-2 text-muted-foreground">Loading weather data...</p>
+          </div>
+        )}
+
+        {error && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="text-center py-8"
+          >
+            <AlertTriangle className="h-8 w-8 text-orange-500 mx-auto mb-2" />
+            <p className="text-muted-foreground">{error}</p>
           </motion.div>
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {weatherData.map((weather, index) => {
-            const Icon = weather.icon;
-            const getWeatherIcon = () => {
-              switch (weather.condition) {
-                case 'sunny': return <Sun className="h-4 w-4 text-yellow-500" />;
-                case 'cloudy': return <Cloud className="h-4 w-4 text-gray-500" />;
-                case 'rainy': return <CloudRain className="h-4 w-4 text-blue-500" />;
-                default: return <CheckCircle className="h-4 w-4 text-green-500" />;
-              }
-            };
-            
-            return (
-              <motion.div
-                key={weather.label}
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.3, delay: index * 0.1 }}
-                whileHover={{ 
-                  y: -5,
-                  transition: { duration: 0.2 }
-                }}
-              >
-                <Card className="hover:shadow-elegant hover:border-primary/20 transition-all duration-300 bg-gradient-to-br from-background to-accent/5">
-                  <CardHeader className="pb-2">
-                    <div className="flex items-center justify-between">
-                      <motion.div
-                        whileHover={{ scale: 1.2, rotate: 15 }}
-                        transition={{ duration: 0.2 }}
-                      >
-                        <Icon className={`h-5 w-5 ${
-                          weather.status === 'good' ? 'text-green-500' :
-                          weather.status === 'warning' ? 'text-orange-500' :
-                          'text-red-500'
-                        }`} />
-                      </motion.div>
+        )}
+
+        {weatherData && !loading && (
+          <>
+            {/* Today's Weather Panel */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.5 }}
+            >
+              <Card className="bg-gradient-to-br from-primary/5 to-accent/10 border-primary/20">
+                <CardHeader>
+                  <CardTitle className="text-lg font-indian text-primary">Today's Weather</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {/* Temperature */}
+                    <motion.div
+                      className="text-center"
+                      whileHover={{ scale: 1.05 }}
+                      transition={{ duration: 0.2 }}
+                    >
                       <motion.div
                         animate={{ 
                           scale: [1, 1.1, 1],
-                          opacity: [1, 0.8, 1]
+                          rotate: [0, 5, -5, 0]
+                        }}
+                        transition={{ 
+                          duration: 3, 
+                          repeat: Infinity,
+                          ease: "easeInOut"
+                        }}
+                      >
+                        <Thermometer className="h-8 w-8 mx-auto mb-2 text-red-500" />
+                      </motion.div>
+                      <motion.div
+                        key={weatherData.current.temp}
+                        initial={{ scale: 1.2 }}
+                        animate={{ scale: 1 }}
+                        transition={{ type: "spring", stiffness: 300 }}
+                        className="text-2xl font-bold text-primary"
+                      >
+                        {weatherData.current.temp}°C
+                      </motion.div>
+                      <p className="text-sm text-muted-foreground">Temperature</p>
+                    </motion.div>
+
+                    {/* Light Intensity */}
+                    <motion.div
+                      className="text-center"
+                      whileHover={{ scale: 1.05 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <motion.div
+                        animate={{ 
+                          opacity: [0.6, 1, 0.6],
+                          scale: [1, 1.1, 1]
                         }}
                         transition={{ 
                           duration: 2, 
                           repeat: Infinity,
-                          delay: index * 0.5
+                          ease: "easeInOut"
                         }}
                       >
-                        {getWeatherIcon()}
+                        <Sun className="h-8 w-8 mx-auto mb-2 text-yellow-500" />
                       </motion.div>
-                    </div>
-                    <CardTitle className="text-sm text-muted-foreground">
-                      {weather.label}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold text-primary mb-1">
-                      {weather.value}
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      {weather.description}
-                    </p>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            );
-          })}
-        </div>
+                      <div className="text-2xl font-bold text-primary">
+                        {weatherData.current.lightIntensity} lux
+                      </div>
+                      <p className="text-sm text-muted-foreground">Light Intensity</p>
+                    </motion.div>
+
+                    {/* Humidity */}
+                    <motion.div
+                      className="text-center"
+                      whileHover={{ scale: 1.05 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <motion.div
+                        animate={{ 
+                          y: [0, -3, 0],
+                          scale: [1, 1.05, 1]
+                        }}
+                        transition={{ 
+                          duration: 2.5, 
+                          repeat: Infinity,
+                          ease: "easeInOut"
+                        }}
+                      >
+                        <Droplets className="h-8 w-8 mx-auto mb-2 text-blue-500" />
+                      </motion.div>
+                      <div className="text-2xl font-bold text-primary">
+                        {weatherData.current.humidity}%
+                      </div>
+                      <p className="text-sm text-muted-foreground">Humidity</p>
+                    </motion.div>
+
+                    {/* Weather Condition */}
+                    <motion.div
+                      className="text-center"
+                      whileHover={{ scale: 1.05 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <motion.div
+                        animate={{ 
+                          rotate: [0, 10, -10, 0],
+                          scale: [1, 1.1, 1]
+                        }}
+                        transition={{ 
+                          duration: 4, 
+                          repeat: Infinity,
+                          ease: "easeInOut"
+                        }}
+                      >
+                        {weatherData.current.condition === 'sunny' && <Sun className="h-8 w-8 mx-auto mb-2 text-yellow-500" />}
+                        {weatherData.current.condition === 'partly-cloudy' && <Cloud className="h-8 w-8 mx-auto mb-2 text-gray-500" />}
+                        {weatherData.current.condition === 'cloudy' && <Cloud className="h-8 w-8 mx-auto mb-2 text-gray-600" />}
+                        {weatherData.current.condition === 'rainy' && <CloudRain className="h-8 w-8 mx-auto mb-2 text-blue-600" />}
+                        {weatherData.current.condition === 'stormy' && <Zap className="h-8 w-8 mx-auto mb-2 text-purple-500" />}
+                        {weatherData.current.condition === 'snowy' && <CloudSnow className="h-8 w-8 mx-auto mb-2 text-blue-300" />}
+                      </motion.div>
+                      <div className="text-lg font-medium text-primary capitalize">
+                        {weatherData.current.description}
+                      </div>
+                      <p className="text-sm text-muted-foreground">Condition</p>
+                    </motion.div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            {/* 7-Day Forecast */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.3 }}
+            >
+              <h3 className="text-lg font-indian text-primary mb-4">7-Day Forecast</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-7 gap-3">
+                {weatherData.forecast.map((day, index) => (
+                  <motion.div
+                    key={day.date}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3, delay: index * 0.1 }}
+                    whileHover={{ 
+                      y: -5,
+                      scale: 1.02,
+                      transition: { duration: 0.2 }
+                    }}
+                  >
+                    <Card className="text-center hover:shadow-elegant hover:border-primary/20 transition-all duration-300 bg-gradient-to-br from-background to-accent/5">
+                      <CardContent className="p-4">
+                        <div className="text-sm font-medium text-primary mb-2">
+                          {day.day}
+                        </div>
+                        
+                        <motion.div
+                          whileHover={{ 
+                            scale: 1.2,
+                            rotate: [0, -10, 10, 0]
+                          }}
+                          transition={{ duration: 0.3 }}
+                          className="mb-3"
+                        >
+                          {day.condition === 'sunny' && <Sun className="h-6 w-6 mx-auto text-yellow-500" />}
+                          {day.condition === 'partly-cloudy' && <Cloud className="h-6 w-6 mx-auto text-gray-500" />}
+                          {day.condition === 'cloudy' && <Cloud className="h-6 w-6 mx-auto text-gray-600" />}
+                          {day.condition === 'rainy' && <CloudRain className="h-6 w-6 mx-auto text-blue-600" />}
+                          {day.condition === 'stormy' && <Zap className="h-6 w-6 mx-auto text-purple-500" />}
+                          {day.condition === 'snowy' && <CloudSnow className="h-6 w-6 mx-auto text-blue-300" />}
+                        </motion.div>
+
+                        <div className="space-y-1">
+                          <div className="flex justify-between text-sm">
+                            <span className="font-medium">{day.temp.max}°</span>
+                            <span className="text-muted-foreground">{day.temp.min}°</span>
+                          </div>
+                          {day.precipitation > 0 && (
+                            <div className="text-xs text-blue-600">
+                              ☔ {day.precipitation}%
+                            </div>
+                          )}
+                        </div>
+                        
+                        <p className="text-xs text-muted-foreground mt-2 capitalize">
+                          {day.description}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                ))}
+              </div>
+            </motion.div>
+          </>
+        )}
       </motion.div>
 
       {/* Market Prices & Alerts Row */}
