@@ -1,9 +1,12 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Layout } from '@/components/Layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { useSensor } from '@/hooks/useSensor';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { 
   Thermometer, 
   Droplets, 
@@ -11,48 +14,67 @@ import {
   Wind,
   Gauge,
   AlertCircle,
-  CheckCircle
+  CheckCircle,
+  RefreshCw
 } from 'lucide-react';
 
 const CropMonitor = () => {
-  const sensorReadings = [
-    {
-      name: 'Soil Temperature',
-      value: 24,
-      unit: '°C',
-      optimal: [18, 30],
-      status: 'good',
-      icon: Thermometer,
-      description: 'Perfect for root development'
-    },
-    {
-      name: 'Soil Moisture',
-      value: 35,
-      unit: '%',
-      optimal: [40, 70],
-      status: 'warning',
-      icon: Droplets,
-      description: 'Requires irrigation soon'
-    },
-    {
-      name: 'Sunlight Hours',
-      value: 8.5,
-      unit: 'hrs',
-      optimal: [6, 10],
-      status: 'good',
-      icon: Sun,
-      description: 'Excellent photosynthesis'
-    },
-    {
-      name: 'Wind Speed',
-      value: 12,
-      unit: 'km/h',
-      optimal: [5, 15],
-      status: 'good',
-      icon: Wind,
-      description: 'Good air circulation'
-    }
-  ];
+  const { sensorData, loading, error, refetch } = useSensor();
+  const { translate, translateSync, currentLanguage } = useLanguage();
+  const [translatedTexts, setTranslatedTexts] = useState<Record<string, string>>({});
+
+  // Translate static texts when language changes
+  useEffect(() => {
+    const translateStaticTexts = async () => {
+      if (currentLanguage.code === 'en') {
+        setTranslatedTexts({});
+        return;
+      }
+
+      const textsToTranslate = [
+        'Crop Monitor',
+        'Real-time crop health monitoring',
+        'Weekly Sensor Trends',
+        'AI Recommendations',
+        'Optimal',
+        'Needs Attention',
+        'Optimal Range',
+        'Refresh Data'
+      ];
+
+      const translated: Record<string, string> = {};
+      
+      for (const text of textsToTranslate) {
+        try {
+          translated[text] = await translate(text);
+        } catch (error) {
+          translated[text] = text;
+        }
+      }
+      
+      setTranslatedTexts(translated);
+    };
+
+    translateStaticTexts();
+  }, [currentLanguage, translate]);
+
+  const t = (text: string) => translatedTexts[text] || translateSync(text) || text;
+
+  if (error) {
+    return (
+      <Layout>
+        <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
+          <AlertCircle className="h-12 w-12 text-destructive" />
+          <h2 className="text-xl font-semibold">Sensor Connection Error</h2>
+          <p className="text-muted-foreground text-center max-w-md">{error}</p>
+          <Button onClick={refetch} variant="outline">
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Retry Connection
+          </Button>
+        </div>
+      </Layout>
+    );
+  }
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -80,11 +102,21 @@ const CropMonitor = () => {
           className="text-center"
         >
           <h1 className="text-hero text-primary font-indian mb-2">
-            🌾 ಬೆಳೆ ಮೇಲ್ವಿಚಾರಣೆ
+            🌾 {t('Crop Monitor')}
           </h1>
           <p className="text-lg text-muted-foreground">
-            Real-time crop health monitoring
+            {t('Real-time crop health monitoring')}
           </p>
+          <Button 
+            onClick={refetch} 
+            variant="outline" 
+            size="sm" 
+            className="mt-2"
+            disabled={loading}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            {t('Refresh Data')}
+          </Button>
         </motion.div>
 
         {/* Status Overview */}
@@ -94,8 +126,40 @@ const CropMonitor = () => {
           transition={{ delay: 0.1 }}
           className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
         >
-          {sensorReadings.map((sensor, index) => {
-            const Icon = sensor.icon;
+          {loading ? (
+            // Loading skeleton
+            Array.from({ length: 4 }).map((_, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: index * 0.1 }}
+              >
+                <Card className="h-full">
+                  <CardHeader className="pb-3">
+                    <div className="animate-pulse">
+                      <div className="h-6 w-6 bg-muted rounded mb-2"></div>
+                      <div className="h-4 w-24 bg-muted rounded"></div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="animate-pulse space-y-4">
+                      <div className="h-8 w-16 bg-muted rounded mx-auto"></div>
+                      <div className="h-6 w-20 bg-muted rounded mx-auto"></div>
+                      <div className="h-2 w-full bg-muted rounded"></div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            ))
+          ) : sensorData?.sensors.map((sensor, index) => {
+            const iconMap: Record<string, any> = {
+              'thermometer': Thermometer,
+              'droplets': Droplets,
+              'sun': Sun,
+              'wind': Wind
+            };
+            const Icon = iconMap[sensor.icon] || Gauge;
             const progressValue = getProgressValue(sensor.value, sensor.optimal);
             
             return (
@@ -129,18 +193,18 @@ const CropMonitor = () => {
                           {sensor.unit}
                         </span>
                       </div>
-                      <Badge variant={sensor.status === 'good' ? 'default' : 'destructive'} className="mt-2">
-                        {sensor.status === 'good' ? 'Optimal' : 'Needs Attention'}
-                      </Badge>
+                       <Badge variant={sensor.status === 'good' ? 'default' : 'destructive'} className="mt-2">
+                         {sensor.status === 'good' ? t('Optimal') : t('Needs Attention')}
+                       </Badge>
                     </div>
 
                     {/* Progress Bar */}
                     <div className="space-y-2">
-                      <div className="flex justify-between text-xs text-muted-foreground">
-                        <span>{sensor.optimal[0]}{sensor.unit}</span>
-                        <span>Optimal Range</span>
-                        <span>{sensor.optimal[1]}{sensor.unit}</span>
-                      </div>
+                       <div className="flex justify-between text-xs text-muted-foreground">
+                         <span>{sensor.optimal[0]}{sensor.unit}</span>
+                         <span>{t('Optimal Range')}</span>
+                         <span>{sensor.optimal[1]}{sensor.unit}</span>
+                       </div>
                       <Progress 
                         value={progressValue} 
                         className="h-2"
@@ -168,14 +232,14 @@ const CropMonitor = () => {
           {/* Weekly Trends */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Gauge className="h-5 w-5 text-primary" />
-                <span>Weekly Sensor Trends</span>
-              </CardTitle>
+               <CardTitle className="flex items-center space-x-2">
+                 <Gauge className="h-5 w-5 text-primary" />
+                 <span>{t('Weekly Sensor Trends')}</span>
+               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {sensorReadings.map((sensor, index) => (
+                {sensorData?.sensors.map((sensor, index) => (
                   <div key={sensor.name} className="space-y-2">
                     <div className="flex justify-between text-sm">
                       <span className="font-medium">{sensor.name}</span>
@@ -204,50 +268,53 @@ const CropMonitor = () => {
           {/* Recommendations */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <AlertCircle className="h-5 w-5 text-accent" />
-                <span>AI Recommendations</span>
-              </CardTitle>
+               <CardTitle className="flex items-center space-x-2">
+                 <AlertCircle className="h-5 w-5 text-accent" />
+                 <span>{t('AI Recommendations')}</span>
+               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <motion.div
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.4 }}
-                  className="p-3 bg-orange-50 border-l-4 border-orange-400 rounded"
-                >
-                  <h4 className="font-medium text-orange-800">Irrigation Needed</h4>
-                  <p className="text-sm text-orange-700 mt-1">
-                    Soil moisture is below optimal. Recommend irrigation within next 12 hours.
-                  </p>
-                </motion.div>
-
-                <motion.div
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.5 }}
-                  className="p-3 bg-green-50 border-l-4 border-green-400 rounded"
-                >
-                  <h4 className="font-medium text-green-800">Perfect Temperature</h4>
-                  <p className="text-sm text-green-700 mt-1">
-                    Soil temperature is ideal for current crop growth stage.
-                  </p>
-                </motion.div>
-
-                <motion.div
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.6 }}
-                  className="p-3 bg-blue-50 border-l-4 border-blue-400 rounded"
-                >
-                  <h4 className="font-medium text-blue-800">Weather Alert</h4>
-                  <p className="text-sm text-blue-700 mt-1">
-                    Light rain expected tomorrow. Adjust irrigation accordingly.
-                  </p>
-                </motion.div>
-              </div>
-            </CardContent>
+             <CardContent>
+               <div className="space-y-4">
+                 {sensorData?.recommendations.map((recommendation, index) => (
+                   <motion.div
+                     key={recommendation.title}
+                     initial={{ opacity: 0, x: -10 }}
+                     animate={{ opacity: 1, x: 0 }}
+                     transition={{ delay: 0.4 + index * 0.1 }}
+                     className={`p-3 border-l-4 rounded ${
+                       recommendation.severity === 'high' 
+                         ? 'bg-red-50 border-red-400' 
+                         : recommendation.severity === 'medium' 
+                         ? 'bg-orange-50 border-orange-400' 
+                         : 'bg-green-50 border-green-400'
+                     }`}
+                   >
+                     <h4 className={`font-medium ${
+                       recommendation.severity === 'high' 
+                         ? 'text-red-800' 
+                         : recommendation.severity === 'medium' 
+                         ? 'text-orange-800' 
+                         : 'text-green-800'
+                     }`}>
+                       {recommendation.title}
+                     </h4>
+                     <p className={`text-sm mt-1 ${
+                       recommendation.severity === 'high' 
+                         ? 'text-red-700' 
+                         : recommendation.severity === 'medium' 
+                         ? 'text-orange-700' 
+                         : 'text-green-700'
+                     }`}>
+                       {recommendation.description}
+                     </p>
+                   </motion.div>
+                 )) || (
+                   <div className="text-center text-muted-foreground py-8">
+                     No recommendations available. Configure your sensor API to get AI insights.
+                   </div>
+                 )}
+               </div>
+             </CardContent>
           </Card>
         </motion.div>
       </div>

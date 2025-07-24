@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Menu, Bell, HelpCircle, User, ChevronDown, Globe, Settings } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -17,8 +17,42 @@ export const Navbar: React.FC<NavbarProps> = ({ onMenuToggle, isSidebarOpen }) =
   const [showProfile, setShowProfile] = useState(false);
   const [showLanguages, setShowLanguages] = useState(false);
   
-  const { currentLanguage, setLanguage, translate } = useLanguage();
+  const { currentLanguage, setLanguage, translate, translateSync } = useLanguage();
   const navigate = useNavigate();
+  const [translatedTexts, setTranslatedTexts] = useState<Record<string, string>>({});
+
+  // Translate static texts when language changes
+  useEffect(() => {
+    const translateStaticTexts = async () => {
+      if (currentLanguage.code === 'en') {
+        setTranslatedTexts({});
+        return;
+      }
+
+      const textsToTranslate = [
+        'Notifications',
+        'Settings', 
+        'Sign Out',
+        'Language'
+      ];
+
+      const translated: Record<string, string> = {};
+      
+      for (const text of textsToTranslate) {
+        try {
+          translated[text] = await translate(text);
+        } catch (error) {
+          translated[text] = text;
+        }
+      }
+      
+      setTranslatedTexts(translated);
+    };
+
+    translateStaticTexts();
+  }, [currentLanguage, translate]);
+
+  const t = (text: string) => translatedTexts[text] || translateSync(text) || text;
 
   return (
     <motion.nav
@@ -152,7 +186,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onMenuToggle, isSidebarOpen }) =
                 animate={{ opacity: 1, y: 0 }}
                 className="absolute right-0 mt-2 w-80 bg-card rounded-lg shadow-card border p-4 z-50"
               >
-                <h3 className="font-semibold mb-3">{translate('notifications')}</h3>
+                <h3 className="font-semibold mb-3">{t('Notifications')}</h3>
                 <div className="space-y-2">
                   <div className="p-2 bg-accent/10 rounded text-sm">
                     🌾 Crop monitoring alert: Low soil moisture detected
@@ -221,7 +255,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onMenuToggle, isSidebarOpen }) =
                     }}
                   >
                     <Globe className="h-4 w-4" />
-                    {translate('language')}: {currentLanguage.nativeName}
+                    {t('Language')}: {currentLanguage.nativeName}
                   </Button>
                   <Button 
                     variant="outline" 
@@ -233,11 +267,11 @@ export const Navbar: React.FC<NavbarProps> = ({ onMenuToggle, isSidebarOpen }) =
                     }}
                   >
                     <Settings className="h-4 w-4" />
-                    {translate('settings')}
+                    {t('Settings')}
                   </Button>
                   <Button variant="outline" size="sm" className="w-full justify-start text-destructive gap-2">
                     <User className="h-4 w-4" />
-                    {translate('sign_out')}
+                    {t('Sign Out')}
                   </Button>
                 </div>
               </motion.div>

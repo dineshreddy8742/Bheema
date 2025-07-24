@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { translateText } from '@/services/translationService';
 
 export interface Language {
   code: string;
@@ -18,7 +19,9 @@ export const languages: Language[] = [
 interface LanguageContextType {
   currentLanguage: Language;
   setLanguage: (language: Language) => void;
-  translate: (text: string) => string;
+  translate: (text: string) => Promise<string>;
+  translateSync: (text: string) => string;
+  translationCache: Map<string, string>;
 }
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
@@ -31,60 +34,9 @@ export const useLanguage = () => {
   return context;
 };
 
-// Basic translation map for demo purposes
-const translations: Record<string, Record<string, string>> = {
-  'en': {
-    'welcome': 'Welcome',
-    'crop_monitor': 'Crop Monitor',
-    'disease_check': 'Disease Check',
-    'market_price': 'Market Price',
-    'gov_schemes': 'Gov Schemes',
-    'weather_forecast': 'Weather Daily Forecast',
-    'temperature': 'Temperature',
-    'humidity': 'Humidity',
-    'light_intensity': 'Light Intensity',
-    'weather': 'Weather',
-    'notifications': 'Notifications',
-    'settings': 'Settings',
-    'sign_out': 'Sign Out',
-    'language': 'Language'
-  },
-  'kn': {
-    'welcome': 'ನಮಸ್ಕಾರ',
-    'crop_monitor': 'ಬೆಳೆ ಮೇಲ್ವಿಚಾರಣೆ',
-    'disease_check': 'ರೋಗ ಪರೀಕ್ಷೆ',
-    'market_price': 'ಮಾರುಕಟ್ಟೆ ಬೆಲೆ',
-    'gov_schemes': 'ಸರ್ಕಾರಿ ಯೋಜನೆಗಳು',
-    'weather_forecast': 'ಹವಾಮಾನ ಮುನ್ನೋಟ',
-    'temperature': 'ತಾಪಮಾನ',
-    'humidity': 'ಆರ್ದ್ರತೆ',
-    'light_intensity': 'ಬೆಳಕಿನ ತೀವ್ರತೆ',
-    'weather': 'ಹವಾಮಾನ',
-    'notifications': 'ಸೂಚನೆಗಳು',
-    'settings': 'ಸೆಟ್ಟಿಂಗ್ಗಳು',
-    'sign_out': 'ಸೈನ್ ಔಟ್',
-    'language': 'ಭಾಷೆ'
-  },
-  'hi': {
-    'welcome': 'स्वागत',
-    'crop_monitor': 'फसल मॉनिटर',
-    'disease_check': 'रोग जांच',
-    'market_price': 'बाजार मूल्य',
-    'gov_schemes': 'सरकारी योजनाएं',
-    'weather_forecast': 'मौसम पूर्वानुमान',
-    'temperature': 'तापमान',
-    'humidity': 'नमी',
-    'light_intensity': 'प्रकाश तीव्रता',
-    'weather': 'मौसम',
-    'notifications': 'सूचनाएं',
-    'settings': 'सेटिंग्स',
-    'sign_out': 'साइन आउट',
-    'language': 'भाषा'
-  }
-};
-
 export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentLanguage, setCurrentLanguage] = useState<Language>(languages[0]);
+  const [translationCache, setTranslationCache] = useState<Map<string, string>>(new Map());
 
   useEffect(() => {
     const savedLanguage = localStorage.getItem('preferred-language');
@@ -99,14 +51,54 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const setLanguage = (language: Language) => {
     setCurrentLanguage(language);
     localStorage.setItem('preferred-language', language.code);
+    // Clear cache when language changes
+    setTranslationCache(new Map());
   };
 
-  const translate = (key: string): string => {
-    return translations[currentLanguage.code]?.[key] || translations['en'][key] || key;
+  const translate = async (text: string): Promise<string> => {
+    // Return original text if it's English
+    if (currentLanguage.code === 'en') {
+      return text;
+    }
+
+    // Check cache first
+    const cacheKey = `${text}-${currentLanguage.code}`;
+    if (translationCache.has(cacheKey)) {
+      return translationCache.get(cacheKey)!;
+    }
+
+    try {
+      const translatedText = await translateText(text, currentLanguage.code);
+      
+      // Cache the translation
+      setTranslationCache(prev => new Map(prev).set(cacheKey, translatedText));
+      
+      return translatedText;
+    } catch (error) {
+      console.warn('Translation failed:', error);
+      return text; // Return original text if translation fails
+    }
+  };
+
+  const translateSync = (text: string): string => {
+    // Return original text if it's English
+    if (currentLanguage.code === 'en') {
+      return text;
+    }
+
+    // Check cache for instant translation
+    const cacheKey = `${text}-${currentLanguage.code}`;
+    return translationCache.get(cacheKey) || text;
   };
 
   return (
-    <LanguageContext.Provider value={{ currentLanguage, setLanguage, translate }}>
+    <LanguageContext.Provider value={{ 
+      currentLanguage, 
+      setLanguage, 
+      translate, 
+      translateSync, 
+      translationCache 
+    }}>
       {children}
     </LanguageContext.Provider>
   );

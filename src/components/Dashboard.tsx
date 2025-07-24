@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
@@ -25,14 +25,50 @@ import {
 
 export const Dashboard: React.FC = () => {
   const navigate = useNavigate();
-  const { translate } = useLanguage();
+  const { translate, translateSync, currentLanguage } = useLanguage();
   const { weatherData, loading, error, refetch } = useWeather();
+  const [translatedTexts, setTranslatedTexts] = useState<Record<string, string>>({});
+
+  // Translate static texts when language changes
+  useEffect(() => {
+    const translateStaticTexts = async () => {
+      if (currentLanguage.code === 'en') {
+        setTranslatedTexts({});
+        return;
+      }
+
+      const textsToTranslate = [
+        'Crop Monitor',
+        'Disease Check', 
+        'Market Price',
+        'Gov Schemes',
+        'Weather Daily Forecast',
+        'Market Trends'
+      ];
+
+      const translated: Record<string, string> = {};
+      
+      for (const text of textsToTranslate) {
+        try {
+          translated[text] = await translate(text);
+        } catch (error) {
+          translated[text] = text;
+        }
+      }
+      
+      setTranslatedTexts(translated);
+    };
+
+    translateStaticTexts();
+  }, [currentLanguage, translate]);
+
+  const t = (text: string) => translatedTexts[text] || translateSync(text) || text;
 
   const quickActions = [
-    { title: translate('crop_monitor'), emoji: '🌾', color: 'bg-primary', route: '/crop-monitor' },
-    { title: translate('disease_check'), emoji: '🦠', color: 'bg-secondary', route: '/disease-detector' },
-    { title: translate('market_price'), emoji: '📈', color: 'bg-accent', route: '/market-trends' },
-    { title: translate('gov_schemes'), emoji: '🏛️', color: 'bg-farm-leaf', route: '/government-schemes' }
+    { title: t('Crop Monitor'), emoji: '🌾', color: 'bg-primary', route: '/crop-monitor' },
+    { title: t('Disease Check'), emoji: '🦠', color: 'bg-secondary', route: '/disease-detector' },
+    { title: t('Market Price'), emoji: '📈', color: 'bg-accent', route: '/market-trends' },
+    { title: t('Gov Schemes'), emoji: '🏛️', color: 'bg-farm-leaf', route: '/government-schemes' }
   ];
 
   const handleQuickAction = (route: string) => {
@@ -146,7 +182,7 @@ export const Dashboard: React.FC = () => {
         {/* Header with Refresh */}
         <div className="flex items-center justify-between">
           <h2 className="text-section-title text-primary font-indian flex items-center gap-2">
-            🌤️ {translate('weather_forecast')}
+            🌤️ {t('Weather Daily Forecast')}
             <motion.div
               animate={{ rotate: 360 }}
               transition={{ duration: 20, repeat: Infinity, ease: "linear" }}

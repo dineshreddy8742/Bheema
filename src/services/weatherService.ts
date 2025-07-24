@@ -157,9 +157,9 @@ const mapWeatherCondition = (icon: string): string => {
 
 export const fetchWeatherData = async (lat: number = 12.9716, lon: number = 77.5946): Promise<WeatherData> => {
   try {
-    // If no real API key, return mock data
+    // Require real API key
     if (API_KEY === 'demo') {
-      return mockWeatherData;
+      throw new Error('Please configure your OpenWeatherMap API key. Get it from https://openweathermap.org/api');
     }
 
     // Fetch current weather
