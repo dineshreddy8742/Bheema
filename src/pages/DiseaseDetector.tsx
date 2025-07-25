@@ -102,7 +102,7 @@ const DiseaseDetector = () => {
           className="text-center"
         >
           <h1 className="text-hero text-primary font-indian mb-2">
-            🦠 ರೋಗ ಪತ್ತೆ
+            🦠 Disease Detector
           </h1>
           <p className="text-lg text-muted-foreground">
             AI-powered crop disease detection

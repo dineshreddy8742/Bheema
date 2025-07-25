@@ -9,7 +9,9 @@ import {
   X,
   Home,
   Settings,
-  LogOut
+  LogOut,
+  Bot,
+  ShoppingCart
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { cn } from '@/lib/utils';
@@ -48,6 +50,18 @@ const menuItems = [
     url: '/government-schemes',
     icon: Building2,
     description: '🏛️ Available Benefits'
+  },
+  {
+    title: 'AI Assistant',
+    url: '/chatbot',
+    icon: Bot,
+    description: '🤖 Smart farming help'
+  },
+  {
+    title: 'Grocery Market',
+    url: '/grocery-marketplace',
+    icon: ShoppingCart,
+    description: '🛒 Buy & sell produce'
   }
 ];
 

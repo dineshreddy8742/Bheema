@@ -43,7 +43,14 @@ export const Dashboard: React.FC = () => {
         'Market Price',
         'Gov Schemes',
         'Weather Daily Forecast',
-        'Market Trends'
+        'Market Trends',
+        'AI Assistant',
+        'Grocery Market',
+        'Welcome, Farmer!',
+        'Digital Farming Assistant',
+        'Monitor your crops',
+        'Get AI insights',
+        'Maximize your harvest'
       ];
 
       const translated: Record<string, string> = {};
@@ -68,7 +75,9 @@ export const Dashboard: React.FC = () => {
     { title: t('Crop Monitor'), emoji: '🌾', color: 'bg-primary', route: '/crop-monitor' },
     { title: t('Disease Check'), emoji: '🦠', color: 'bg-secondary', route: '/disease-detector' },
     { title: t('Market Price'), emoji: '📈', color: 'bg-accent', route: '/market-trends' },
-    { title: t('Gov Schemes'), emoji: '🏛️', color: 'bg-farm-leaf', route: '/government-schemes' }
+    { title: t('Gov Schemes'), emoji: '🏛️', color: 'bg-farm-leaf', route: '/government-schemes' },
+    { title: t('AI Assistant'), emoji: '🤖', color: 'bg-purple-500', route: '/chatbot' },
+    { title: t('Grocery Market'), emoji: '🛒', color: 'bg-green-500', route: '/grocery-marketplace' }
   ];
 
   const handleQuickAction = (route: string) => {
@@ -127,13 +136,13 @@ export const Dashboard: React.FC = () => {
         className="text-center py-8"
       >
         <h1 className="text-hero text-primary font-indian mb-4">
-          ನಮಸ್ಕಾರ, ಕಿಸಾನ್! 
+          🌾 {t('Welcome, Farmer!')}
         </h1>
         <p className="text-lg text-muted-foreground">
-          Welcome to your Digital Farming Assistant
+          {t('Digital Farming Assistant')}
         </p>
         <p className="text-sm text-secondary mt-2">
-          Monitor your crops • Get AI insights • Maximize your harvest
+          {t('Monitor your crops')} • {t('Get AI insights')} • {t('Maximize your harvest')}
         </p>
       </motion.div>
 
@@ -142,7 +151,7 @@ export const Dashboard: React.FC = () => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.1 }}
-        className="grid grid-cols-2 md:grid-cols-4 gap-4"
+        className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4"
       >
         {quickActions.map((action, index) => (
           <motion.div

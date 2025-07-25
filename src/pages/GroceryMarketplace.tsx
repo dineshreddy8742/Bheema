@@ -1,0 +1,555 @@
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Layout } from '@/components/Layout';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { 
+  ShoppingCart, 
+  Plus,
+  Search,
+  MapPin,
+  Star,
+  Clock,
+  User,
+  Phone,
+  Package,
+  Truck,
+  Filter,
+  Grid,
+  List,
+  Heart,
+  MessageCircle
+} from 'lucide-react';
+
+interface Product {
+  id: string;
+  name: string;
+  price: number;
+  unit: string;
+  quantity: number;
+  seller: string;
+  location: string;
+  rating: number;
+  image: string;
+  description: string;
+  category: string;
+  freshness: string;
+  postedAt: Date;
+  isOrganic: boolean;
+}
+
+const GroceryMarketplace = () => {
+  const { translate, currentLanguage } = useLanguage();
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [showAddProduct, setShowAddProduct] = useState(false);
+  const [newProduct, setNewProduct] = useState({
+    name: '',
+    price: '',
+    unit: 'kg',
+    quantity: '',
+    description: '',
+    category: 'vegetables',
+    isOrganic: false
+  });
+
+  const [products] = useState<Product[]>([
+    {
+      id: '1',
+      name: 'Fresh Tomatoes',
+      price: 45,
+      unit: 'kg',
+      quantity: 50,
+      seller: 'Ramesh Kumar',
+      location: 'Bangalore, Karnataka',
+      rating: 4.5,
+      image: '🍅',
+      description: 'Farm fresh red tomatoes, perfect for cooking and salads. Harvested yesterday.',
+      category: 'vegetables',
+      freshness: 'Very Fresh',
+      postedAt: new Date(Date.now() - 2 * 60 * 60 * 1000),
+      isOrganic: true
+    },
+    {
+      id: '2',
+      name: 'Organic Onions',
+      price: 32,
+      unit: 'kg',
+      quantity: 30,
+      seller: 'Sunita Devi',
+      location: 'Mysore, Karnataka',
+      rating: 4.8,
+      image: '🧅',
+      description: 'Certified organic onions with no pesticides. Great for daily cooking.',
+      category: 'vegetables',
+      freshness: 'Fresh',
+      postedAt: new Date(Date.now() - 5 * 60 * 60 * 1000),
+      isOrganic: true
+    },
+    {
+      id: '3',
+      name: 'Basmati Rice',
+      price: 85,
+      unit: 'kg',
+      quantity: 100,
+      seller: 'Krishnan Farms',
+      location: 'Hassan, Karnataka',
+      rating: 4.7,
+      image: '🌾',
+      description: 'Premium quality basmati rice with authentic aroma and taste.',
+      category: 'grains',
+      freshness: 'Excellent',
+      postedAt: new Date(Date.now() - 8 * 60 * 60 * 1000),
+      isOrganic: false
+    },
+    {
+      id: '4',
+      name: 'Fresh Mangoes',
+      price: 120,
+      unit: 'kg',
+      quantity: 25,
+      seller: 'Mango Valley Farm',
+      location: 'Belgaum, Karnataka',
+      rating: 4.9,
+      image: '🥭',
+      description: 'Sweet Alphonso mangoes directly from our orchard. Limited stock available.',
+      category: 'fruits',
+      freshness: 'Very Fresh',
+      postedAt: new Date(Date.now() - 1 * 60 * 60 * 1000),
+      isOrganic: true
+    },
+    {
+      id: '5',
+      name: 'Fresh Spinach',
+      price: 25,
+      unit: 'kg',
+      quantity: 15,
+      seller: 'Green Leaf Farm',
+      location: 'Mandya, Karnataka',
+      rating: 4.3,
+      image: '🥬',
+      description: 'Tender and nutritious spinach leaves, perfect for healthy meals.',
+      category: 'vegetables',
+      freshness: 'Very Fresh',
+      postedAt: new Date(Date.now() - 3 * 60 * 60 * 1000),
+      isOrganic: true
+    },
+    {
+      id: '6',
+      name: 'Wheat Flour',
+      price: 42,
+      unit: 'kg',
+      quantity: 80,
+      seller: 'Heritage Mills',
+      location: 'Tumkur, Karnataka',
+      rating: 4.6,
+      image: '🌾',
+      description: 'Stone ground whole wheat flour, rich in fiber and nutrients.',
+      category: 'grains',
+      freshness: 'Fresh',
+      postedAt: new Date(Date.now() - 12 * 60 * 60 * 1000),
+      isOrganic: false
+    }
+  ]);
+
+  const categories = [
+    { id: 'all', name: 'All Products', icon: '🛒' },
+    { id: 'vegetables', name: 'Vegetables', icon: '🥕' },
+    { id: 'fruits', name: 'Fruits', icon: '🍎' },
+    { id: 'grains', name: 'Grains', icon: '🌾' },
+    { id: 'dairy', name: 'Dairy', icon: '🥛' }
+  ];
+
+  const filteredProducts = products.filter(product => {
+    const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         product.seller.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory;
+    return matchesSearch && matchesCategory;
+  });
+
+  const handleAddProduct = () => {
+    // In a real app, this would submit to a backend
+    console.log('Adding new product:', newProduct);
+    setShowAddProduct(false);
+    setNewProduct({
+      name: '',
+      price: '',
+      unit: 'kg',
+      quantity: '',
+      description: '',
+      category: 'vegetables',
+      isOrganic: false
+    });
+  };
+
+  const formatTimeAgo = (date: Date) => {
+    const now = new Date();
+    const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
+    
+    if (diffInHours < 1) return 'Just posted';
+    if (diffInHours === 1) return '1 hour ago';
+    if (diffInHours < 24) return `${diffInHours} hours ago`;
+    return `${Math.floor(diffInHours / 24)} days ago`;
+  };
+
+  return (
+    <Layout>
+      <div className="space-y-6">
+        {/* Header */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center"
+        >
+          <h1 className="text-hero text-primary font-indian mb-2">
+            🛒 Grocery Marketplace
+          </h1>
+          <p className="text-lg text-muted-foreground">
+            Buy and sell fresh groceries directly from farmers
+          </p>
+        </motion.div>
+
+        {/* Search and Controls */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="flex flex-col md:flex-row gap-4 items-center"
+        >
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+            <Input
+              placeholder="Search products, sellers..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          
+          <div className="flex space-x-2">
+            <Button
+              onClick={() => setShowAddProduct(true)}
+              className="bg-accent hover:bg-accent/90"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Sell Product
+            </Button>
+            
+            <Button
+              variant="outline"
+              onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
+            >
+              {viewMode === 'grid' ? <List className="h-4 w-4" /> : <Grid className="h-4 w-4" />}
+            </Button>
+          </div>
+        </motion.div>
+
+        {/* Categories */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="flex flex-wrap gap-2"
+        >
+          {categories.map((category) => (
+            <Button
+              key={category.id}
+              variant={selectedCategory === category.id ? "default" : "outline"}
+              size="sm"
+              onClick={() => setSelectedCategory(category.id)}
+              className="flex items-center space-x-2"
+            >
+              <span>{category.icon}</span>
+              <span>{category.name}</span>
+            </Button>
+          ))}
+        </motion.div>
+
+        {/* Products Grid/List */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className={viewMode === 'grid' 
+            ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+            : "space-y-4"
+          }
+        >
+          <AnimatePresence>
+            {filteredProducts.map((product, index) => (
+              <motion.div
+                key={product.id}
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                transition={{ delay: index * 0.1 }}
+                whileHover={{ scale: 1.02 }}
+              >
+                <Card className={`hover:shadow-glow transition-all ${
+                  viewMode === 'list' ? 'flex flex-row' : ''
+                }`}>
+                  {viewMode === 'grid' ? (
+                    <>
+                      <CardHeader className="text-center pb-2">
+                        <div className="text-6xl mb-2">{product.image}</div>
+                        <CardTitle className="text-lg">{product.name}</CardTitle>
+                        <div className="flex justify-center space-x-2">
+                          {product.isOrganic && (
+                            <Badge variant="secondary" className="bg-green-100 text-green-700">
+                              Organic
+                            </Badge>
+                          )}
+                          <Badge variant="outline">{product.freshness}</Badge>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-primary">
+                            ₹{product.price}
+                            <span className="text-sm text-muted-foreground">/{product.unit}</span>
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {product.quantity} {product.unit} available
+                          </div>
+                        </div>
+
+                        <p className="text-sm text-muted-foreground text-center">
+                          {product.description}
+                        </p>
+
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between text-sm">
+                            <div className="flex items-center space-x-1">
+                              <User className="h-3 w-3" />
+                              <span>{product.seller}</span>
+                            </div>
+                            <div className="flex items-center space-x-1">
+                              <Star className="h-3 w-3 text-yellow-500" />
+                              <span>{product.rating}</span>
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-center justify-between text-sm">
+                            <div className="flex items-center space-x-1 text-muted-foreground">
+                              <MapPin className="h-3 w-3" />
+                              <span>{product.location}</span>
+                            </div>
+                            <div className="flex items-center space-x-1 text-muted-foreground">
+                              <Clock className="h-3 w-3" />
+                              <span>{formatTimeAgo(product.postedAt)}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex space-x-2 pt-2">
+                          <Button className="flex-1" size="sm">
+                            <ShoppingCart className="h-4 w-4 mr-2" />
+                            Buy Now
+                          </Button>
+                          <Button variant="outline" size="sm">
+                            <MessageCircle className="h-4 w-4" />
+                          </Button>
+                          <Button variant="outline" size="sm">
+                            <Heart className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </>
+                  ) : (
+                    // List View
+                    <div className="flex w-full">
+                      <div className="w-20 h-20 flex items-center justify-center text-4xl">
+                        {product.image}
+                      </div>
+                      <div className="flex-1 p-4">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h3 className="text-lg font-semibold">{product.name}</h3>
+                            <p className="text-sm text-muted-foreground">{product.description}</p>
+                            <div className="flex items-center space-x-4 mt-2 text-sm">
+                              <div className="flex items-center space-x-1">
+                                <User className="h-3 w-3" />
+                                <span>{product.seller}</span>
+                              </div>
+                              <div className="flex items-center space-x-1">
+                                <MapPin className="h-3 w-3" />
+                                <span>{product.location}</span>
+                              </div>
+                              <div className="flex items-center space-x-1">
+                                <Star className="h-3 w-3 text-yellow-500" />
+                                <span>{product.rating}</span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-xl font-bold text-primary">
+                              ₹{product.price}/{product.unit}
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                              {product.quantity} {product.unit} available
+                            </div>
+                            <div className="flex space-x-2 mt-2">
+                              <Button size="sm">
+                                <ShoppingCart className="h-4 w-4 mr-1" />
+                                Buy
+                              </Button>
+                              <Button variant="outline" size="sm">
+                                <MessageCircle className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </Card>
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        </motion.div>
+
+        {/* Add Product Modal */}
+        <AnimatePresence>
+          {showAddProduct && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+              onClick={() => setShowAddProduct(false)}
+            >
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                onClick={(e) => e.stopPropagation()}
+                className="w-full max-w-md"
+              >
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Add New Product</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <label className="text-sm font-medium">Product Name</label>
+                      <Input
+                        value={newProduct.name}
+                        onChange={(e) => setNewProduct({...newProduct, name: e.target.value})}
+                        placeholder="e.g., Fresh Tomatoes"
+                      />
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-sm font-medium">Price</label>
+                        <Input
+                          type="number"
+                          value={newProduct.price}
+                          onChange={(e) => setNewProduct({...newProduct, price: e.target.value})}
+                          placeholder="45"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium">Unit</label>
+                        <select
+                          value={newProduct.unit}
+                          onChange={(e) => setNewProduct({...newProduct, unit: e.target.value})}
+                          className="w-full p-2 border rounded-md"
+                        >
+                          <option value="kg">kg</option>
+                          <option value="gram">gram</option>
+                          <option value="piece">piece</option>
+                          <option value="dozen">dozen</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-medium">Quantity Available</label>
+                      <Input
+                        type="number"
+                        value={newProduct.quantity}
+                        onChange={(e) => setNewProduct({...newProduct, quantity: e.target.value})}
+                        placeholder="50"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-medium">Category</label>
+                      <select
+                        value={newProduct.category}
+                        onChange={(e) => setNewProduct({...newProduct, category: e.target.value})}
+                        className="w-full p-2 border rounded-md"
+                      >
+                        <option value="vegetables">Vegetables</option>
+                        <option value="fruits">Fruits</option>
+                        <option value="grains">Grains</option>
+                        <option value="dairy">Dairy</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-medium">Description</label>
+                      <Textarea
+                        value={newProduct.description}
+                        onChange={(e) => setNewProduct({...newProduct, description: e.target.value})}
+                        placeholder="Describe your product..."
+                        rows={3}
+                      />
+                    </div>
+
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="organic"
+                        checked={newProduct.isOrganic}
+                        onChange={(e) => setNewProduct({...newProduct, isOrganic: e.target.checked})}
+                      />
+                      <label htmlFor="organic" className="text-sm">This is an organic product</label>
+                    </div>
+
+                    <div className="flex space-x-2 pt-4">
+                      <Button onClick={handleAddProduct} className="flex-1">
+                        <Package className="h-4 w-4 mr-2" />
+                        List Product
+                      </Button>
+                      <Button variant="outline" onClick={() => setShowAddProduct(false)}>
+                        Cancel
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Empty State */}
+        {filteredProducts.length === 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-center py-12"
+          >
+            <Package className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-lg font-medium mb-2">No products found</h3>
+            <p className="text-muted-foreground mb-4">
+              Try adjusting your search or browse different categories
+            </p>
+            <Button onClick={() => setShowAddProduct(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Be the first to sell
+            </Button>
+          </motion.div>
+        )}
+      </div>
+    </Layout>
+  );
+};
+
+export default GroceryMarketplace;

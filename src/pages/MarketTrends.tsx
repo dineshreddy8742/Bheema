@@ -88,7 +88,7 @@ const MarketTrends = () => {
     setIsListening(true);
     // Simulate voice recognition
     setTimeout(() => {
-      setQuery('ಈಗಿನ ಟೊಮೇಟೋ ಬೆಲೆ ಏನು?'); // "What is the price of tomatoes today?"
+      setQuery('What is the price of tomatoes today?');
       setIsListening(false);
       setSelectedCrop('Tomato');
     }, 2000);
@@ -109,7 +109,7 @@ const MarketTrends = () => {
           className="text-center"
         >
           <h1 className="text-hero text-primary font-indian mb-2">
-            📈 ಮಾರುಕಟ್ಟೆ ಬೆಲೆಗಳು
+            📈 Market Trends
           </h1>
           <p className="text-lg text-muted-foreground">
             Real-time market prices and trends
@@ -134,7 +134,7 @@ const MarketTrends = () => {
                 <div className="flex-1 relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                   <Input
-                    placeholder="Ask: ಈಗಿನ ಟೊಮೇಟೋ ಬೆಲೆ ಏನು? (What is tomato price today?)"
+                    placeholder="Ask: What is tomato price today?"
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                     className="pl-10"
