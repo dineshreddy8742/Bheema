@@ -24,7 +24,7 @@ export interface SensorData {
 
 // Example API endpoint - replace with your actual sensor API
 const SENSOR_API_URL = 'https://api.yoursensorprovider.com/v1';
-const API_KEY = process.env.VITE_SENSOR_API_KEY || 'demo';
+const API_KEY = import.meta.env.VITE_SENSOR_API_KEY || 'demo';
 
 export const fetchSensorData = async (farmId: string = 'default'): Promise<SensorData> => {
   try {
