@@ -7,7 +7,7 @@ export interface TranslationResponse {
 
 // Google Cloud Translation API configuration
 const TRANSLATION_API_URL = 'https://translation.googleapis.com/language/translate/v2';
-const API_KEY = import.meta.env.VITE_GOOGLE_TRANSLATE_API_KEY || 'demo';
+const API_KEY = "AIzaSyCanZ-4Meo-PeI-0bSJrrxS_tD9kd6BttE";
 
 export const translateText = async (
   text: string, 
@@ -15,9 +15,7 @@ export const translateText = async (
   sourceLanguage: string = 'en'
 ): Promise<string> => {
   try {
-    if (API_KEY === 'demo') {
-      throw new Error('Please configure your Google Cloud Translation API key in environment variables');
-    }
+  
 
     const response = await axios.post(`${TRANSLATION_API_URL}?key=${API_KEY}`, {
       q: text,
@@ -40,9 +38,7 @@ export const translateMultipleTexts = async (
   sourceLanguage: string = 'en'
 ): Promise<string[]> => {
   try {
-    if (API_KEY === 'demo') {
-      throw new Error('Please configure your Google Cloud Translation API key in environment variables');
-    }
+  
 
     const response = await axios.post(`${TRANSLATION_API_URL}?key=${API_KEY}`, {
       q: texts,
@@ -61,9 +57,7 @@ export const translateMultipleTexts = async (
 
 export const detectLanguage = async (text: string): Promise<string> => {
   try {
-    if (API_KEY === 'demo') {
-      throw new Error('Please configure your Google Cloud Translation API key in environment variables');
-    }
+  
 
     const response = await axios.post(`https://translation.googleapis.com/language/detect/v2?key=${API_KEY}`, {
       q: text

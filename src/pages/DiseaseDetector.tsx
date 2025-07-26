@@ -4,9 +4,9 @@ import { Layout } from '@/components/Layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Camera, 
-  Upload, 
+import {
+  Camera,
+  Upload,
   Clipboard,
   Bug,
   CheckCircle,
@@ -20,6 +20,9 @@ const DiseaseDetector = () => {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<any>(null);
+  const [showCamera, setShowCamera] = useState(false); // New state for camera visibility
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -29,14 +32,44 @@ const DiseaseDetector = () => {
       reader.onload = (e) => {
         setSelectedImage(e.target?.result as string);
         setAnalysisResult(null);
+        setShowCamera(false); // Hide camera if an image is uploaded
       };
       reader.readAsDataURL(file);
     }
   };
 
-  const handleCameraCapture = () => {
-    // TODO: Implement camera capture
-    fileInputRef.current?.click();
+  const handleCameraCapture = async () => {
+    try {
+      const mediaStream = await navigator.mediaDevices.getUserMedia({ video: true });
+      if (videoRef.current) {
+        videoRef.current.srcObject = mediaStream;
+        videoRef.current.play();
+        setShowCamera(true); // Show the video feed
+        setSelectedImage(null); // Clear any previously selected image
+        setAnalysisResult(null); // Clear any previous analysis result
+      }
+    } catch (err) {
+      console.error("Error accessing camera: ", err);
+      alert("Could not access camera. Please ensure you have granted camera permissions.");
+    }
+  };
+
+  const takePhotoFromStream = () => {
+    if (videoRef.current && canvasRef.current) {
+      const context = canvasRef.current.getContext('2d');
+      if (context) {
+        canvasRef.current.width = videoRef.current.videoWidth;
+        canvasRef.current.height = videoRef.current.videoHeight;
+        context.drawImage(videoRef.current, 0, 0, videoRef.current.videoWidth, videoRef.current.videoHeight);
+        const imageData = canvasRef.current.toDataURL('image/png');
+        setSelectedImage(imageData);
+        setShowCamera(false); // Hide camera after capture
+        if (videoRef.current.srcObject) {
+          const tracks = (videoRef.current.srcObject as MediaStream).getTracks();
+          tracks.forEach(track => track.stop()); // Stop stream
+        }
+      }
+    }
   };
 
   const handlePasteImage = async () => {
@@ -167,10 +200,29 @@ const DiseaseDetector = () => {
                 className="hidden"
               />
 
-              {/* Image Preview */}
-              <AnimatePresence>
-                {selectedImage && (
+              {/* Camera Feed or Image Preview */}
+              <AnimatePresence mode="wait">
+                {showCamera ? (
                   <motion.div
+                    key="camera-feed"
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.9 }}
+                    className="space-y-4 text-center"
+                  >
+                    <video ref={videoRef} className="w-full max-w-md mx-auto rounded-lg shadow-soft" autoPlay playsInline />
+                    <canvas ref={canvasRef} className="hidden" />
+                    <Button
+                      onClick={takePhotoFromStream}
+                      className="bg-primary hover:bg-primary/90"
+                    >
+                      <Camera className="h-4 w-4 mr-2" />
+                      Capture Photo
+                    </Button>
+                  </motion.div>
+                ) : selectedImage ? (
+                  <motion.div
+                    key="image-preview"
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.9 }}
@@ -209,7 +261,7 @@ const DiseaseDetector = () => {
                       </Button>
                     </div>
                   </motion.div>
-                )}
+                ) : null}
               </AnimatePresence>
             </CardContent>
           </Card>
