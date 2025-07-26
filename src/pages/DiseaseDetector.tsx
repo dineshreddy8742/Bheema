@@ -1,416 +1,213 @@
-import React, { useState, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Layout } from '@/components/Layout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import {
-  Camera,
-  Upload,
-  Clipboard,
-  Bug,
-  CheckCircle,
-  AlertTriangle,
-  Loader2,
-  MapPin,
-  ExternalLink
-} from 'lucide-react';
+import React, { useState, useCallback } from 'react';
+import { useDropzone } from 'react-dropzone';
+import { Layout } from '../components/Layout';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Label } from '../components/ui/label';
+import { Image as ImageIcon, UploadCloud, XCircle, Camera as CameraIcon } from 'lucide-react';
 
-const DiseaseDetector = () => {
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [analysisResult, setAnalysisResult] = useState<any>(null);
-  const [showCamera, setShowCamera] = useState(false); // New state for camera visibility
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+const DiseaseDetector: React.FC = () => {
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isCameraOpen, setIsCameraOpen] = useState<boolean>(false);
+  const [cameraError, setCameraError] = useState<string | null>(null);
+  const videoRef = React.useRef<HTMLVideoElement>(null);
 
-  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setSelectedImage(e.target?.result as string);
-        setAnalysisResult(null);
-        setShowCamera(false); // Hide camera if an image is uploaded
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleCameraCapture = async () => {
+  const handleCameraOpen = async () => {
     try {
-      const mediaStream = await navigator.mediaDevices.getUserMedia({ video: true });
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
       if (videoRef.current) {
-        videoRef.current.srcObject = mediaStream;
-        videoRef.current.play();
-        setShowCamera(true); // Show the video feed
-        setSelectedImage(null); // Clear any previously selected image
-        setAnalysisResult(null); // Clear any previous analysis result
+        videoRef.current.srcObject = stream;
+        setIsCameraOpen(true);
       }
-    } catch (err) {
-      console.error("Error accessing camera: ", err);
-      alert("Could not access camera. Please ensure you have granted camera permissions.");
+    } catch (error: any) {
+      console.error("Error accessing camera:", error);
+      setCameraError(error.name === 'NotAllowedError' ? 'Camera access denied. Please allow camera permissions in your browser settings.' : 'Could not access camera. Please ensure you have a camera connected.');
+      alert("Could not access camera. Please ensure you have a camera and have granted permissions.");
     }
   };
 
-  const takePhotoFromStream = () => {
-    if (videoRef.current && canvasRef.current) {
-      const context = canvasRef.current.getContext('2d');
+  const handleCapturePhoto = () => {
+    if (videoRef.current) {
+      const canvas = document.createElement('canvas');
+      canvas.width = videoRef.current.videoWidth;
+      canvas.height = videoRef.current.videoHeight;
+      const context = canvas.getContext('2d');
       if (context) {
-        canvasRef.current.width = videoRef.current.videoWidth;
-        canvasRef.current.height = videoRef.current.videoHeight;
-        context.drawImage(videoRef.current, 0, 0, videoRef.current.videoWidth, videoRef.current.videoHeight);
-        const imageData = canvasRef.current.toDataURL('image/png');
-        setSelectedImage(imageData);
-        setShowCamera(false); // Hide camera after capture
-        if (videoRef.current.srcObject) {
-          const tracks = (videoRef.current.srcObject as MediaStream).getTracks();
-          tracks.forEach(track => track.stop()); // Stop stream
-        }
-      }
-    }
-  };
-
-  const handlePasteImage = async () => {
-    try {
-      const clipboardItems = await navigator.clipboard.read();
-      for (const clipboardItem of clipboardItems) {
-        for (const type of clipboardItem.types) {
-          if (type.startsWith('image/')) {
-            const blob = await clipboardItem.getType(type);
-            const reader = new FileReader();
-            reader.onload = (e) => {
-              setSelectedImage(e.target?.result as string);
-              setAnalysisResult(null);
-            };
-            reader.readAsDataURL(blob);
+        context.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+        canvas.toBlob((blob) => {
+          if (blob) {
+            const file = new File([blob], "captured_image.png", { type: "image/png" });
+            setSelectedImage(file);
+            setPreviewUrl(URL.createObjectURL(file));
+            handleCameraClose(); // Close camera after capturing
           }
-        }
+        }, 'image/png');
       }
-    } catch (err) {
-      console.error('Failed to read clipboard contents: ', err);
     }
   };
 
-  const analyzeImage = () => {
-    if (!selectedImage) return;
-    
-    setIsAnalyzing(true);
-    
-    // Simulate AI analysis
-    setTimeout(() => {
-      setAnalysisResult({
-        disease: 'Late Blight',
-        confidence: 87,
-        severity: 'Moderate',
-        symptoms: [
-          'Brown spots on leaves',
-          'Yellowing around affected areas',
-          'White fungal growth on undersides'
-        ],
-        treatment: [
-          'Remove affected leaves immediately',
-          'Apply copper-based fungicide',
-          'Improve air circulation',
-          'Reduce watering frequency'
-        ],
-        prevention: [
-          'Avoid overhead watering',
-          'Plant disease-resistant varieties',
-          'Ensure proper spacing between plants'
-        ]
-      });
-      setIsAnalyzing(false);
-    }, 3000);
+  const handleCameraClose = () => {
+    if (videoRef.current && videoRef.current.srcObject) {
+      const stream = videoRef.current.srcObject as MediaStream;
+      stream.getTracks().forEach(track => track.stop());
+      videoRef.current.srcObject = null;
+    }
+    setIsCameraOpen(false);
+  };
+
+  const onDrop = useCallback((acceptedFiles: File[]) => {
+    const file = acceptedFiles[0];
+    if (file && file.type.startsWith('image/')) {
+      setSelectedImage(file);
+      setPreviewUrl(URL.createObjectURL(file));
+    } else {
+      alert('Please upload an image file (e.g., JPG, PNG, GIF).');
+    }
+  }, []);
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    accept: {
+      'image/*': ['.jpeg', '.png', '.jpg', '.gif'],
+    },
+    multiple: false,
+  });
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file && file.type.startsWith('image/')) {
+      setSelectedImage(file);
+      setPreviewUrl(URL.createObjectURL(file));
+    } else {
+      alert('Please upload an image file (e.g., JPG, PNG, GIF).');
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setSelectedImage(null);
+    setPreviewUrl(null);
+  };
+
+  const handleSubmit = () => {
+    if (selectedImage) {
+      console.log('Submitting image:', selectedImage.name);
+      // Here you would typically send the image to a backend service
+      // For now, we'll just log it.
+      alert('Image submitted! (Check console for details)');
+    } else {
+      alert('Please select an image first.');
+    }
   };
 
   return (
     <Layout>
-      <div className="space-y-6">
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center"
-        >
-          <h1 className="text-hero text-primary font-indian mb-2">
-            🦠 Disease Detector
-          </h1>
-          <p className="text-lg text-muted-foreground">
-            AI-powered crop disease detection
-          </p>
-        </motion.div>
+      <div className="container mx-auto py-8">
+        <Card className="w-full max-w-2xl mx-auto">
+          <CardHeader>
+            <CardTitle className="text-2xl font-bold text-center">Upload Image for Disease Detection</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div
+              {...getRootProps()}
+              className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-primary transition-colors"
+            >
+              <input {...getInputProps()} />
+              {isDragActive ? (
+                <p className="text-primary">Drop the image here ...</p>
+              ) : (
+                <div className="flex flex-col items-center space-y-2">
+                  <UploadCloud className="h-12 w-12 text-gray-400" />
+                  <p className="text-gray-600">Drag 'n' drop an image here, or click to select one</p>
+                  <p className="text-sm text-gray-500">(JPG, PNG, GIF)</p>
+                </div>
+              )}
+            </div>
 
-        {/* Upload Section */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-        >
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Bug className="h-5 w-5 text-primary" />
-                <span>Upload Plant Image</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Upload Options */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                  <Button
-                    variant="outline"
-                    className="w-full h-24 flex flex-col space-y-2 hover:bg-accent/10"
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    <Upload className="h-8 w-8 text-primary" />
-                    <span>Upload Image</span>
-                  </Button>
-                </motion.div>
+            <div className="flex items-center justify-center space-x-2">
+              <span className="text-gray-500">OR</span>
+            </div>
 
-                <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                  <Button
-                    variant="outline"
-                    className="w-full h-24 flex flex-col space-y-2 hover:bg-accent/10"
-                    onClick={handleCameraCapture}
-                  >
-                    <Camera className="h-8 w-8 text-primary" />
-                    <span>Take Photo</span>
-                  </Button>
-                </motion.div>
-
-                <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                  <Button
-                    variant="outline"
-                    className="w-full h-24 flex flex-col space-y-2 hover:bg-accent/10"
-                    onClick={handlePasteImage}
-                  >
-                    <Clipboard className="h-8 w-8 text-primary" />
-                    <span>Paste Image</span>
-                  </Button>
-                </motion.div>
-              </div>
-
-              <input
-                ref={fileInputRef}
+            <div className="grid w-full max-w-sm items-center gap-1.5 mx-auto">
+              <Label htmlFor="picture" className="sr-only">Picture</Label>
+              <Input
+                id="picture"
                 type="file"
                 accept="image/*"
-                onChange={handleImageUpload}
-                className="hidden"
+                onChange={handleFileChange}
+                className="block w-full text-sm text-gray-500
+                  file:mr-4 file:py-2 file:px-4
+                  file:rounded-full file:border-0
+                  file:text-sm file:font-semibold
+                  file:bg-primary-foreground file:text-primary
+                  hover:file:bg-primary/90 hover:file:text-white"
               />
+            </div>
 
-              {/* Camera Feed or Image Preview */}
-              <AnimatePresence mode="wait">
-                {showCamera ? (
-                  <motion.div
-                    key="camera-feed"
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.9 }}
-                    className="space-y-4 text-center"
-                  >
-                    <video ref={videoRef} className="w-full max-w-md mx-auto rounded-lg shadow-soft" autoPlay playsInline />
-                    <canvas ref={canvasRef} className="hidden" />
-                    <Button
-                      onClick={takePhotoFromStream}
-                      className="bg-primary hover:bg-primary/90"
-                    >
-                      <Camera className="h-4 w-4 mr-2" />
-                      Capture Photo
-                    </Button>
-                  </motion.div>
-                ) : selectedImage ? (
-                  <motion.div
-                    key="image-preview"
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.9 }}
-                    className="space-y-4"
-                  >
-                    <div className="relative">
-                      <img
-                        src={selectedImage}
-                        alt="Selected plant"
-                        className="w-full max-w-md mx-auto rounded-lg shadow-soft"
-                      />
-                      {isAnalyzing && (
-                        <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center">
-                          <div className="text-center text-white">
-                            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />
-                            <p>Analyzing image...</p>
-                          </div>
-                        </div>
-                      )}
-                    </div>
+            <div className="flex items-center justify-center space-x-2">
+              <span className="text-gray-500">OR</span>
+            </div>
 
-                    <div className="text-center">
-                      <Button
-                        onClick={analyzeImage}
-                        disabled={isAnalyzing}
-                        className="bg-accent hover:bg-accent/90"
-                      >
-                        {isAnalyzing ? (
-                          <>
-                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                            Analyzing...
-                          </>
-                        ) : (
-                          'Analyze for Diseases'
-                        )}
-                      </Button>
-                    </div>
-                  </motion.div>
-                ) : null}
-              </AnimatePresence>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        {/* Analysis Results */}
-        <AnimatePresence>
-          {analysisResult && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="space-y-6"
+            <Button
+              onClick={handleCameraOpen}
+              className="w-full py-2 text-lg"
             >
-              {/* Disease Detection Result */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <AlertTriangle className="h-5 w-5 text-orange-500" />
-                      <span>Disease Detected</span>
-                    </div>
-                    <Badge variant="destructive">
-                      {analysisResult.confidence}% Confidence
-                    </Badge>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="text-center">
-                      <h3 className="text-2xl font-bold text-destructive mb-2">
-                        {analysisResult.disease}
-                      </h3>
-                      <Badge variant="outline" className="text-orange-600">
-                        Severity: {analysisResult.severity}
-                      </Badge>
-                    </div>
+              <CameraIcon className="mr-2 h-5 w-5" />
+              Take Photo
+            </Button>
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                      {/* Symptoms */}
-                      <div className="space-y-3">
-                        <h4 className="font-semibold flex items-center space-x-2">
-                          <Bug className="h-4 w-4" />
-                          <span>Symptoms</span>
-                        </h4>
-                        <ul className="space-y-1">
-                          {analysisResult.symptoms.map((symptom: string, index: number) => (
-                            <motion.li
-                              key={index}
-                              initial={{ opacity: 0, x: -10 }}
-                              animate={{ opacity: 1, x: 0 }}
-                              transition={{ delay: index * 0.1 }}
-                              className="text-sm flex items-start space-x-2"
-                            >
-                              <CheckCircle className="h-3 w-3 text-green-500 mt-0.5" />
-                              <span>{symptom}</span>
-                            </motion.li>
-                          ))}
-                        </ul>
-                      </div>
+            {cameraError && (
+              <p className="text-red-500 text-center text-sm">{cameraError}</p>
+            )}
 
-                      {/* Treatment */}
-                      <div className="space-y-3">
-                        <h4 className="font-semibold flex items-center space-x-2">
-                          <AlertTriangle className="h-4 w-4" />
-                          <span>Treatment</span>
-                        </h4>
-                        <ul className="space-y-1">
-                          {analysisResult.treatment.map((treatment: string, index: number) => (
-                            <motion.li
-                              key={index}
-                              initial={{ opacity: 0, x: -10 }}
-                              animate={{ opacity: 1, x: 0 }}
-                              transition={{ delay: (index + 3) * 0.1 }}
-                              className="text-sm flex items-start space-x-2"
-                            >
-                              <div className="w-3 h-3 bg-accent rounded-full mt-0.5" />
-                              <span>{treatment}</span>
-                            </motion.li>
-                          ))}
-                        </ul>
-                      </div>
+            {isCameraOpen && (
+              <div className="relative mt-6 p-4 border rounded-lg flex flex-col items-center">
+                <video ref={videoRef} autoPlay playsInline className="w-full max-w-md h-64 object-cover rounded-md"></video>
+                <Button
+                  onClick={handleCapturePhoto}
+                  className="mt-4 w-full py-2 text-lg"
+                >
+                  <CameraIcon className="mr-2 h-5 w-5" />
+                  Capture Photo
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute top-2 right-2 text-red-500 hover:text-red-700"
+                  onClick={handleCameraClose}
+                >
+                  <XCircle className="h-6 w-6" />
+                </Button>
+              </div>
+            )
+            }
 
-                      {/* Prevention */}
-                      <div className="space-y-3">
-                        <h4 className="font-semibold flex items-center space-x-2">
-                          <CheckCircle className="h-4 w-4" />
-                          <span>Prevention</span>
-                        </h4>
-                        <ul className="space-y-1">
-                          {analysisResult.prevention.map((prevention: string, index: number) => (
-                            <motion.li
-                              key={index}
-                              initial={{ opacity: 0, x: -10 }}
-                              animate={{ opacity: 1, x: 0 }}
-                              transition={{ delay: (index + 6) * 0.1 }}
-                              className="text-sm flex items-start space-x-2"
-                            >
-                              <div className="w-3 h-3 bg-primary rounded-full mt-0.5" />
-                              <span>{prevention}</span>
-                            </motion.li>
-                          ))}
-                        </ul>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+            {previewUrl && (
+              <div className="relative mt-6 p-4 border rounded-lg flex flex-col items-center">
+                <img src={previewUrl} alt="Preview" className="max-w-full h-auto rounded-md max-h-64 object-contain" />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute top-2 right-2 text-red-500 hover:text-red-700"
+                  onClick={handleRemoveImage}
+                >
+                  <XCircle className="h-6 w-6" />
+                </Button>
+                <p className="mt-2 text-sm text-gray-600">{selectedImage?.name}</p>
+              </div>
+            )}
 
-              {/* Local Remedy Stores */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <MapPin className="h-5 w-5 text-primary" />
-                    <span>Nearby Agricultural Stores</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {[
-                      { name: 'Karnataka Agri Store', distance: '2.3 km', rating: 4.5 },
-                      { name: 'Farmer\'s Choice', distance: '3.1 km', rating: 4.2 },
-                      { name: 'Green Valley Supplies', distance: '4.7 km', rating: 4.7 }
-                    ].map((store, index) => (
-                      <motion.div
-                        key={store.name}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: index * 0.1 }}
-                        className="flex items-center justify-between p-3 bg-accent/5 rounded-lg hover:bg-accent/10 transition-colors"
-                      >
-                        <div>
-                          <p className="font-medium">{store.name}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {store.distance} away • ⭐ {store.rating}
-                          </p>
-                        </div>
-                        <Button variant="outline" size="sm">
-                          <ExternalLink className="h-4 w-4 mr-1" />
-                          Directions
-                        </Button>
-                      </motion.div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          )}
-        </AnimatePresence>
+            <Button
+              onClick={handleSubmit}
+              className="w-full py-2 text-lg"
+              disabled={!selectedImage}
+            >
+              <ImageIcon className="mr-2 h-5 w-5" />
+              Analyze Image
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     </Layout>
   );

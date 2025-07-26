@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { 
-  ShoppingCart, 
+  ShoppingCart,
   Plus,
   Search,
   MapPin,
@@ -22,8 +22,11 @@ import {
   Grid,
   List,
   Heart,
-  MessageCircle
+  MessageCircle,
+  XCircle
 } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
+import { useToast } from '@/components/ui/use-toast';
 
 interface Product {
   id: string;
@@ -42,12 +45,18 @@ interface Product {
   isOrganic: boolean;
 }
 
+interface CartItem extends Product {
+  cartQuantity: number;
+}
+
 const GroceryMarketplace = () => {
   const { translate, currentLanguage } = useLanguage();
+  const { toast } = useToast();
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [showAddProduct, setShowAddProduct] = useState(false);
+  const [showCart, setShowCart] = useState(false); // New state for cart visibility
   const [newProduct, setNewProduct] = useState({
     name: '',
     price: '',
@@ -57,8 +66,9 @@ const GroceryMarketplace = () => {
     category: 'vegetables',
     isOrganic: false
   });
+  const [cartItems, setCartItems] = useState<CartItem[]>([]); // New state for cart items
 
-  const [products] = useState<Product[]>([
+  const [products, setProducts] = useState<Product[]>([
     {
       id: '1',
       name: 'Fresh Tomatoes',
@@ -175,6 +185,23 @@ const GroceryMarketplace = () => {
   const handleAddProduct = () => {
     // In a real app, this would submit to a backend
     console.log('Adding new product:', newProduct);
+    const productToAdd: Product = {
+      id: String(products.length + 1), // Simple ID generation
+      name: newProduct.name,
+      price: parseFloat(newProduct.price),
+      unit: newProduct.unit,
+      quantity: parseInt(newProduct.quantity),
+      seller: 'Your Farm', // Placeholder
+      location: 'Your Location', // Placeholder
+      rating: 4.0, // Default rating
+      image: '📦', // Default emoji image
+      description: newProduct.description,
+      category: newProduct.category,
+      freshness: 'Fresh', // Default freshness
+      postedAt: new Date(),
+      isOrganic: newProduct.isOrganic,
+    };
+    setProducts(prevProducts => [...prevProducts, productToAdd]);
     setShowAddProduct(false);
     setNewProduct({
       name: '',
@@ -195,6 +222,38 @@ const GroceryMarketplace = () => {
     if (diffInHours === 1) return '1 hour ago';
     if (diffInHours < 24) return `${diffInHours} hours ago`;
     return `${Math.floor(diffInHours / 24)} days ago`;
+  };
+
+  const addToCart = (product: Product) => {
+    setCartItems(prevItems => {
+      const existingItem = prevItems.find(item => item.id === product.id);
+      if (existingItem) {
+        return prevItems.map(item =>
+          item.id === product.id ? { ...item, cartQuantity: item.cartQuantity + 1 } : item
+        );
+      } else {
+        toast({
+          title: "Added to cart",
+          description: `${product.name} has been added to your cart.`,
+        });
+        return [...prevItems, { ...product, cartQuantity: 1 }];
+      }
+    });
+  };
+
+  const removeFromCart = (productId: string) => {
+    setCartItems(prevItems => prevItems.filter(item => item.id !== productId));
+  };
+
+  const updateCartQuantity = (productId: string, newQuantity: number) => {
+    setCartItems(prevItems => {
+      if (newQuantity <= 0) {
+        return prevItems.filter(item => item.id !== productId);
+      }
+      return prevItems.map(item =>
+        item.id === productId ? { ...item, cartQuantity: newQuantity } : item
+      );
+    });
   };
 
   return (
@@ -239,6 +298,62 @@ const GroceryMarketplace = () => {
               <Plus className="h-4 w-4 mr-2" />
               Sell Product
             </Button>
+            
+            <Dialog open={showCart} onOpenChange={setShowCart}>
+              <DialogTrigger asChild>
+                <Button variant="outline" className="relative">
+                  <ShoppingCart className="h-4 w-4" />
+                  {cartItems.length > 0 && (
+                    <Badge className="absolute -top-2 -right-2 px-2 py-1 text-xs rounded-full bg-primary text-primary-foreground">
+                      {cartItems.reduce((total, item) => total + item.cartQuantity, 0)}
+                    </Badge>
+                  )}
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[425px]">
+                <DialogHeader>
+                  <DialogTitle>Your Cart</DialogTitle>
+                </DialogHeader>
+                <div className="py-4 space-y-4">
+                  {cartItems.length === 0 ? (
+                    <p className="text-center text-muted-foreground">Your cart is empty.</p>
+                  ) : (
+                    <div className="space-y-3">
+                      {cartItems.map(item => (
+                        <div key={item.id} className="flex items-center justify-between">
+                          <div className="flex items-center space-x-2">
+                            <span className="text-2xl">{item.image}</span>
+                            <div>
+                              <p className="font-medium">{item.name}</p>
+                              <p className="text-sm text-muted-foreground">₹{item.price}/{item.unit}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Button size="sm" variant="outline" onClick={() => updateCartQuantity(item.id, item.cartQuantity - 1)}>-</Button>
+                            <span>{item.cartQuantity}</span>
+                            <Button size="sm" variant="outline" onClick={() => updateCartQuantity(item.id, item.cartQuantity + 1)}>+</Button>
+                            <Button size="sm" variant="destructive" onClick={() => removeFromCart(item.id)}>
+                              <XCircle className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                {cartItems.length > 0 && (
+                  <DialogFooter className="flex flex-col sm:flex-col sm:space-x-0 sm:space-y-2">
+                    <div className="flex justify-between items-center font-bold text-lg">
+                      <span>Total:</span>
+                      <span>₹{cartItems.reduce((total, item) => total + (item.price * item.cartQuantity), 0).toFixed(2)}</span>
+                    </div>
+                    <Button className="w-full">
+                      Proceed to Payment
+                    </Button>
+                  </DialogFooter>
+                )}
+              </DialogContent>
+            </Dialog>
             
             <Button
               variant="outline"
@@ -347,7 +462,7 @@ const GroceryMarketplace = () => {
                         </div>
 
                         <div className="flex space-x-2 pt-2">
-                          <Button className="flex-1" size="sm">
+                          <Button className="flex-1" size="sm" onClick={() => addToCart(product)}>
                             <ShoppingCart className="h-4 w-4 mr-2" />
                             Buy Now
                           </Button>

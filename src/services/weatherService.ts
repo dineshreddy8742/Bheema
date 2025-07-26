@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // OpenWeatherMap API configuration
-const API_KEY = 'demo'; // Users should replace with their API key
+const API_KEY = import.meta.env.VITE_OPENWEATHER_API_KEY;
 const BASE_URL = 'https://api.openweathermap.org/data/2.5';
 
 export interface WeatherData {
@@ -157,9 +157,9 @@ const mapWeatherCondition = (icon: string): string => {
 
 export const fetchWeatherData = async (lat: number = 12.9716, lon: number = 77.5946): Promise<WeatherData> => {
   try {
-    // Require real API key
-    if (API_KEY === 'demo') {
-      throw new Error('Please configure your OpenWeatherMap API key. Get it from https://openweathermap.org/api');
+    // Check if API key is the placeholder and throw an error if it is.
+    if (API_KEY === "YOUR_API_KEY_HERE" || API_KEY === "demo") {
+      throw new Error("Please configure your OpenWeatherMap API key. Get it from https://openweathermap.org/api");
     }
 
     // Fetch current weather

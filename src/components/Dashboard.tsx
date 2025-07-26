@@ -359,6 +359,107 @@ export const Dashboard: React.FC = () => {
                       <p className="text-sm text-muted-foreground">Condition</p>
                     </motion.div>
                   </div>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+                    {/* Wind Speed */}
+                    <motion.div
+                      className="text-center"
+                      whileHover={{ scale: 1.05 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <motion.div
+                        animate={{ 
+                          rotate: [0, 360],
+                          scale: [1, 1.1, 1]
+                        }}
+                        transition={{ 
+                          duration: 5, 
+                          repeat: Infinity,
+                          ease: "linear"
+                        }}
+                      >
+                        <Wind className="h-8 w-8 mx-auto mb-2 text-green-500" />
+                      </motion.div>
+                      <div className="text-2xl font-bold text-primary">
+                        {weatherData.current.windSpeed} km/h
+                      </div>
+                      <p className="text-sm text-muted-foreground">Wind Speed</p>
+                    </motion.div>
+
+                    {/* Pressure */}
+                    <motion.div
+                      className="text-center"
+                      whileHover={{ scale: 1.05 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <motion.div
+                        animate={{ 
+                          scale: [1, 1.05, 1],
+                          y: [0, -2, 0]
+                        }}
+                        transition={{ 
+                          duration: 2, 
+                          repeat: Infinity,
+                          ease: "easeInOut"
+                        }}
+                      >
+                        <Gauge className="h-8 w-8 mx-auto mb-2 text-purple-500" />
+                      </motion.div>
+                      <div className="text-2xl font-bold text-primary">
+                        {weatherData.current.pressure} hPa
+                      </div>
+                      <p className="text-sm text-muted-foreground">Pressure</p>
+                    </motion.div>
+
+                    {/* Cloud Cover */}
+                    <motion.div
+                      className="text-center"
+                      whileHover={{ scale: 1.05 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <motion.div
+                        animate={{ 
+                          scale: [1, 1.05, 1],
+                          opacity: [0.8, 1, 0.8]
+                        }}
+                        transition={{ 
+                          duration: 3, 
+                          repeat: Infinity,
+                          ease: "easeInOut"
+                        }}
+                      >
+                        <Cloud className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+                      </motion.div>
+                      <div className="text-2xl font-bold text-primary">
+                        {weatherData.current.cloudCover}%
+                      </div>
+                      <p className="text-sm text-muted-foreground">Cloud Cover</p>
+                    </motion.div>
+
+                    {/* Visibility */}
+                    <motion.div
+                      className="text-center"
+                      whileHover={{ scale: 1.05 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <motion.div
+                        animate={{ 
+                          scale: [1, 1.05, 1],
+                          y: [0, -2, 0]
+                        }}
+                        transition={{ 
+                          duration: 2.5, 
+                          repeat: Infinity,
+                          ease: "easeInOut"
+                        }}
+                      >
+                        <Eye className="h-8 w-8 mx-auto mb-2 text-blue-400" />
+                      </motion.div>
+                      <div className="text-2xl font-bold text-primary">
+                        {weatherData.current.visibility} km
+                      </div>
+                      <p className="text-sm text-muted-foreground">Visibility</p>
+                    </motion.div>
+                  </div>
                 </CardContent>
               </Card>
             </motion.div>
@@ -505,7 +606,8 @@ export const Dashboard: React.FC = () => {
                   className={`p-3 rounded-lg border-l-4 ${
                     alert.type === 'warning' ? 'bg-orange-50 border-orange-400' :
                     alert.type === 'success' ? 'bg-green-50 border-green-400' :
-                    'bg-blue-50 border-blue-400'
+                    alert.type === 'info' ? 'bg-blue-50 border-blue-400' :
+                    'bg-gray-50 border-gray-400'
                   }`}
                 >
                   <div className="flex items-start justify-between">
