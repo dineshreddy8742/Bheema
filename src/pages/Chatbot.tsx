@@ -5,7 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { useToast } from '@/components/ui/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { aiAssistantService, AIMessage, AIResponse } from '@/services/aiAssistantService';
 import { 
   MessageCircle, 
   Mic, 
@@ -19,22 +21,18 @@ import {
   Sparkles
 } from 'lucide-react';
 
-interface Message {
-  id: string;
-  content: string;
-  sender: 'user' | 'bot';
-  timestamp: Date;
-  isVoice?: boolean;
-}
+// Using AIMessage from service instead of local interface
 
 const Chatbot = () => {
   const { translate, currentLanguage } = useLanguage();
-  const [messages, setMessages] = useState<Message[]>([
+  const { toast } = useToast();
+  const [messages, setMessages] = useState<AIMessage[]>([
     {
       id: '1',
       content: 'Hello! I\'m your AI farming assistant. I can help you with crop monitoring, disease identification, market prices, and weather forecasts. How can I assist you today?',
       sender: 'bot',
-      timestamp: new Date()
+      timestamp: new Date(),
+      confidence: 1.0
     }
   ]);
   const [inputText, setInputText] = useState('');
@@ -42,6 +40,7 @@ const Chatbot = () => {
   const [isTyping, setIsTyping] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [voiceEnabled, setVoiceEnabled] = useState(true);
+  const [currentResponse, setCurrentResponse] = useState<AIResponse | null>(null);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -54,35 +53,14 @@ const Chatbot = () => {
     scrollToBottom();
   }, [messages]);
 
-  const simulateBotResponse = async (userMessage: string): Promise<string> => {
-    // Simulate AI processing delay
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    const responses = {
-      'weather': 'Based on current data, expect partly cloudy weather with 25°C temperature. Perfect conditions for most crops. Humidity at 65% is ideal for plant growth.',
-      'disease': 'For disease detection, please upload a clear image of the affected plant. I can identify common diseases like blight, rust, and fungal infections with 85% accuracy.',
-      'market': 'Current market prices: Tomato ₹45/kg (+12%), Onion ₹32/kg (-8%), Rice ₹52/kg (stable). Best time to sell tomatoes is within next 2-3 days.',
-      'crop': 'Your crop monitoring shows good health overall. Soil moisture at 68% - optimal range. Consider light irrigation for Field 2 in the next 24 hours.',
-      'help': 'I can assist with: 🌾 Crop monitoring, 🦠 Disease identification, 📈 Market prices, 🌤️ Weather forecasts, 🏛️ Government schemes, and 💡 Farming tips.',
-      'default': 'I understand you need farming assistance. Could you be more specific? Ask me about weather, diseases, market prices, or crop monitoring.'
-    };
-
-    const lowerMessage = userMessage.toLowerCase();
-    
-    if (lowerMessage.includes('weather') || lowerMessage.includes('temperature') || lowerMessage.includes('rain')) {
-      return responses.weather;
-    } else if (lowerMessage.includes('disease') || lowerMessage.includes('pest') || lowerMessage.includes('infection')) {
-      return responses.disease;
-    } else if (lowerMessage.includes('market') || lowerMessage.includes('price') || lowerMessage.includes('sell')) {
-      return responses.market;
-    } else if (lowerMessage.includes('crop') || lowerMessage.includes('monitor') || lowerMessage.includes('soil')) {
-      return responses.crop;
-    } else if (lowerMessage.includes('help') || lowerMessage.includes('assist')) {
-      return responses.help;
-    } else {
-      return responses.default;
-    }
-  };
+  // Set farming context on component mount
+  useEffect(() => {
+    aiAssistantService.setContext({
+      location: 'Bangalore, Karnataka',
+      season: 'Rabi',
+      // Add more context as needed
+    });
+  }, []);
 
   const speakText = (text: string) => {
     if (!voiceEnabled) return;
@@ -105,7 +83,7 @@ const Chatbot = () => {
   const handleSendMessage = async () => {
     if (!inputText.trim()) return;
 
-    const userMessage: Message = {
+    const userMessage: AIMessage = {
       id: Date.now().toString(),
       content: inputText,
       sender: 'user',
@@ -113,24 +91,40 @@ const Chatbot = () => {
     };
 
     setMessages(prev => [...prev, userMessage]);
+    const currentInput = inputText;
     setInputText('');
     setIsTyping(true);
 
     try {
-      const botResponse = await simulateBotResponse(inputText);
+      // Get AI response from service
+      const aiResponse = await aiAssistantService.getAIResponse(currentInput, messages);
+      setCurrentResponse(aiResponse);
+      
+      // Translate if needed
       const translatedResponse = currentLanguage.code !== 'en' 
-        ? await translate(botResponse) 
-        : botResponse;
+        ? await translate(aiResponse.message) 
+        : aiResponse.message;
 
-      const botMessage: Message = {
+      const botMessage: AIMessage = {
         id: (Date.now() + 1).toString(),
         content: translatedResponse,
         sender: 'bot',
-        timestamp: new Date()
+        timestamp: new Date(),
+        confidence: aiResponse.confidence,
+        suggestions: aiResponse.suggestions
       };
 
       setMessages(prev => [...prev, botMessage]);
       setIsTyping(false);
+
+      // Show confidence and suggestions if available
+      if (aiResponse.confidence < 0.8) {
+        toast({
+          title: "AI Confidence",
+          description: `Response confidence: ${Math.round(aiResponse.confidence * 100)}%. Consider rephrasing for better results.`,
+          variant: "default"
+        });
+      }
 
       // Auto-speak bot response
       if (voiceEnabled) {
@@ -138,11 +132,16 @@ const Chatbot = () => {
       }
     } catch (error) {
       setIsTyping(false);
-      console.error('Error getting bot response:', error);
+      toast({
+        title: "AI Error",
+        description: "Failed to get AI response. Please try again.",
+        variant: "destructive"
+      });
+      console.error('Error getting AI response:', error);
     }
   };
 
-  const handleVoiceInput = () => {
+  const handleVoiceInput = async () => {
     setIsRecording(!isRecording);
     
     if (!isRecording) {
@@ -150,20 +149,36 @@ const Chatbot = () => {
       try {
         const recognition = new (window as any).webkitSpeechRecognition();
         recognition.lang = currentLanguage.code === 'en' ? 'en-US' : 'hi-IN';
-        recognition.start();
+        recognition.continuous = false;
+        recognition.interimResults = false;
         
-        recognition.onresult = (event: any) => {
+        recognition.onresult = async (event: any) => {
           const transcript = event.results[0][0].transcript;
           setInputText(transcript);
           setIsRecording(false);
+          
+          // Optionally auto-send voice messages
+          // await handleSendMessage();
         };
         
         recognition.onerror = () => {
           setIsRecording(false);
+          toast({
+            title: "Voice Recognition Error",
+            description: "Could not process voice input. Please try again.",
+            variant: "destructive"
+          });
         };
+
+        recognition.start();
       } catch (error) {
         console.log('Speech recognition not available');
         setIsRecording(false);
+        toast({
+          title: "Voice Not Supported",
+          description: "Voice recognition is not supported in this browser.",
+          variant: "destructive"
+        });
       }
     }
   };
@@ -271,15 +286,24 @@ const Chatbot = () => {
                           <span className="text-xs opacity-70">
                             {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </span>
-                          {message.sender === 'bot' && voiceEnabled && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => speakText(message.content)}
-                              className="h-6 w-6 p-0 opacity-70 hover:opacity-100"
-                            >
-                              <Volume2 className="h-3 w-3" />
-                            </Button>
+                          {message.sender === 'bot' && (
+                            <div className="flex items-center space-x-2">
+                              {message.confidence && (
+                                <span className="text-xs opacity-50">
+                                  {Math.round(message.confidence * 100)}%
+                                </span>
+                              )}
+                              {voiceEnabled && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => speakText(message.content)}
+                                  className="h-6 w-6 p-0 opacity-70 hover:opacity-100"
+                                >
+                                  <Volume2 className="h-3 w-3" />
+                                </Button>
+                              )}
+                            </div>
                           )}
                         </div>
                       </div>
@@ -325,22 +349,22 @@ const Chatbot = () => {
               <div ref={messagesEndRef} />
             </CardContent>
 
-            {/* Quick Questions */}
-            <div className="border-t p-3">
-              <div className="flex flex-wrap gap-2 mb-3">
-                {quickQuestions.map((question, index) => (
-                  <motion.button
-                    key={question}
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: index * 0.1 }}
-                    onClick={() => setInputText(question)}
-                    className="text-xs bg-accent/10 hover:bg-accent/20 text-accent px-2 py-1 rounded-full transition-colors"
-                  >
-                    {question}
-                  </motion.button>
-                ))}
-              </div>
+              {/* Quick Questions & Suggestions */}
+              <div className="border-t p-3">
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {(currentResponse?.suggestions || quickQuestions).map((question, index) => (
+                    <motion.button
+                      key={question}
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: index * 0.1 }}
+                      onClick={() => setInputText(question)}
+                      className="text-xs bg-accent/10 hover:bg-accent/20 text-accent px-2 py-1 rounded-full transition-colors"
+                    >
+                      {question}
+                    </motion.button>
+                  ))}
+                </div>
 
               {/* Input Area */}
               <div className="flex space-x-2">

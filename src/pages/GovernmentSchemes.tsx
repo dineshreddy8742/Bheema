@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Layout } from '@/components/Layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { useToast } from '@/components/ui/use-toast';
+import { governmentSchemesService, Scheme, HelpCenter } from '@/services/governmentSchemesService';
 import { 
   Building2, 
   Mic,
@@ -24,137 +26,124 @@ const GovernmentSchemes = () => {
   const [query, setQuery] = useState('');
   const [isListening, setIsListening] = useState(false);
   const [selectedScheme, setSelectedScheme] = useState<string | null>(null);
+  const [schemes, setSchemes] = useState<Scheme[]>([]);
+  const [helpCenters, setHelpCenters] = useState<HelpCenter[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const { toast } = useToast();
 
-  const schemes = [
-    {
-      id: 'drip-irrigation',
-      name: 'Drip Irrigation Subsidy',
-      category: 'Water Management',
-      subsidy: '90%',
-      maxAmount: '₹1,50,000',
-      status: 'active',
-      deadline: '2024-03-31',
-      eligibility: [
-        'Small and marginal farmers',
-        'Minimum 0.5 acre land',
-        'Valid land documents',
-        'Bank account linked to Aadhaar'
-      ],
-      documents: [
-        'Land ownership certificate',
-        'Aadhaar card',
-        'Bank passbook',
-        'Passport size photographs'
-      ],
-      benefits: [
-        'Up to 90% subsidy on drip irrigation systems',
-        'Water conservation technology',
-        'Increased crop yield',
-        'Reduced labor costs'
-      ],
-      applicationProcess: [
-        'Visit nearest agriculture office',
-        'Submit required documents',
-        'Get technical evaluation done',
-        'Receive approval and subsidy'
-      ]
-    },
-    {
-      id: 'solar-pump',
-      name: 'Solar Water Pump Scheme',
-      category: 'Renewable Energy',
-      subsidy: '75%',
-      maxAmount: '₹2,00,000',
-      status: 'active',
-      deadline: '2024-04-15',
-      eligibility: [
-        'Farmers with irrigation needs',
-        'Grid connection not available',
-        'Minimum 1 acre farmland',
-        'No existing subsidy availed'
-      ],
-      documents: [
-        'Land records',
-        'Income certificate',
-        'Aadhaar card',
-        'Bank account details'
-      ],
-      benefits: [
-        '75% subsidy on solar pump installation',
-        'Free electricity for 25 years',
-        'Environmentally friendly',
-        'Low maintenance costs'
-      ],
-      applicationProcess: [
-        'Apply online at government portal',
-        'Upload necessary documents',
-        'Site inspection by officials',
-        'Installation after approval'
-      ]
-    },
-    {
-      id: 'crop-insurance',
-      name: 'Pradhan Mantri Fasal Bima Yojana',
-      category: 'Insurance',
-      subsidy: '98%',
-      maxAmount: 'Based on crop value',
-      status: 'active',
-      deadline: 'Before sowing season',
-      eligibility: [
-        'All farmers including sharecroppers',
-        'Enrolled in land records',
-        'Growing notified crops',
-        'Premium payment before deadline'
-      ],
-      documents: [
-        'Land documents or agreement',
-        'Aadhaar card',
-        'Bank account details',
-        'Sowing certificate'
-      ],
-      benefits: [
-        'Protection against crop loss',
-        '98% premium subsidy',
-        'Quick claim settlement',
-        'Coverage for natural calamities'
-      ],
-      applicationProcess: [
-        'Enroll through bank or CSC',
-        'Pay minimal premium',
-        'Report loss within 72 hours',
-        'Receive compensation'
-      ]
+  // Load initial data
+  useEffect(() => {
+    const loadInitialData = async () => {
+      try {
+        setLoading(true);
+        const [schemesData, helpCentersData] = await Promise.all([
+          governmentSchemesService.fetchSchemes(),
+          governmentSchemesService.fetchHelpCenters()
+        ]);
+        setSchemes(schemesData);
+        setHelpCenters(helpCentersData);
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to load government schemes data. Please try again.",
+          variant: "destructive"
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadInitialData();
+  }, [toast]);
+
+  // Search schemes
+  const searchSchemes = async (searchQuery: string) => {
+    try {
+      setSearchLoading(true);
+      const searchResults = await governmentSchemesService.fetchSchemes({ 
+        query: searchQuery,
+        limit: 10 
+      });
+      setSchemes(searchResults);
+      
+      if (searchResults.length === 0) {
+        toast({
+          title: "No Results",
+          description: "No schemes found matching your search criteria.",
+          variant: "default"
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Search Error",
+        description: "Failed to search schemes. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setSearchLoading(false);
     }
-  ];
+  };
 
-  const helpCenters = [
-    {
-      name: 'Bangalore Agriculture Office',
-      address: 'Vidhana Soudha, Bangalore',
-      phone: '+91-80-2234-5678',
-      distance: '12 km'
-    },
-    {
-      name: 'Krishi Vigyan Kendra',
-      address: 'UAS Campus, Hebbal',
-      phone: '+91-80-2345-6789',
-      distance: '8 km'
-    },
-    {
-      name: 'District Collector Office',
-      address: 'Mini Vidhana Soudha',
-      phone: '+91-80-3456-7890',
-      distance: '15 km'
-    }
-  ];
-
-  const handleVoiceQuery = () => {
+  const handleVoiceQuery = async () => {
     setIsListening(true);
-    setTimeout(() => {
-      setQuery('ಡ್ರಿಪ್ ಇರಿಗೇಶನ್ ಸಬ್ಸಿಡಿ ಬಗ್ಗೆ ಹೇಳಿ'); // "Tell me about drip irrigation subsidy"
+    try {
+      // Start voice recognition
+      const recognition = new (window as any).webkitSpeechRecognition();
+      recognition.lang = 'hi-IN'; // Hindi/Kannada
+      recognition.continuous = false;
+      recognition.interimResults = false;
+
+      recognition.onresult = async (event: any) => {
+        const transcript = event.results[0][0].transcript;
+        setQuery(transcript);
+        setIsListening(false);
+        
+        // Search schemes based on voice query
+        await searchSchemes(transcript);
+      };
+
+      recognition.onerror = () => {
+        setIsListening(false);
+        toast({
+          title: "Voice Recognition Error",
+          description: "Could not recognize voice input. Please try again.",
+          variant: "destructive"
+        });
+      };
+
+      recognition.start();
+    } catch (error) {
       setIsListening(false);
-      setSelectedScheme('drip-irrigation');
-    }, 2000);
+      // Fallback to mock voice query for demo
+      setQuery('ಡ್ರಿಪ್ ಇರಿಗೇಶನ್ ಸಬ್ಸಿಡಿ ಬಗ್ಗೆ ಹೇಳಿ');
+      await searchSchemes('drip irrigation');
+    }
+  };
+
+  const handleSearch = async () => {
+    if (query.trim()) {
+      await searchSchemes(query.trim());
+    }
+  };
+
+  const handleApplyScheme = async (schemeId: string) => {
+    try {
+      const result = await governmentSchemesService.applyForScheme(schemeId, {});
+      if (result.success) {
+        toast({
+          title: "Application Submitted",
+          description: `Your application has been submitted successfully. Application ID: ${result.applicationId}`,
+          variant: "default"
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Application Error",
+        description: "Failed to submit application. Please try again later.",
+        variant: "destructive"
+      });
+    }
   };
 
   return (
@@ -188,33 +177,51 @@ const GovernmentSchemes = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex space-x-2">
-                <div className="flex-1 relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                  <Input
-                    placeholder="Ask: ಡ್ರಿಪ್ ಇರಿಗೇಶನ್ ಸಬ್ಸಿಡಿ ಬಗ್ಗೆ ಹೇಳಿ (Tell me about drip irrigation subsidy)"
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-                <Button
-                  onClick={handleVoiceQuery}
-                  disabled={isListening}
-                  className={`voice-button h-auto px-4 ${isListening ? 'animate-pulse-soft' : ''}`}
-                >
-                  {isListening ? (
-                    <motion.div
-                      animate={{ scale: [1, 1.2, 1] }}
-                      transition={{ duration: 0.5, repeat: Infinity }}
-                    >
+                <div className="flex space-x-2">
+                  <div className="flex-1 relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                    <Input
+                      placeholder="Ask: ಡ್ರಿಪ್ ಇರಿಗೇಶನ್ ಸಬ್ಸಿಡಿ ಬಗ್ಗೆ ಹೇಳಿ (Tell me about drip irrigation subsidy)"
+                      value={query}
+                      onChange={(e) => setQuery(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                      className="pl-10"
+                    />
+                  </div>
+                  <Button
+                    onClick={handleSearch}
+                    disabled={searchLoading || !query.trim()}
+                    variant="outline"
+                    className="h-auto px-4"
+                  >
+                    {searchLoading ? (
+                      <motion.div
+                        animate={{ rotate: 360 }}
+                        transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                      >
+                        <Search className="h-4 w-4" />
+                      </motion.div>
+                    ) : (
+                      <Search className="h-4 w-4" />
+                    )}
+                  </Button>
+                  <Button
+                    onClick={handleVoiceQuery}
+                    disabled={isListening}
+                    className={`voice-button h-auto px-4 ${isListening ? 'animate-pulse-soft' : ''}`}
+                  >
+                    {isListening ? (
+                      <motion.div
+                        animate={{ scale: [1, 1.2, 1] }}
+                        transition={{ duration: 0.5, repeat: Infinity }}
+                      >
+                        <Mic className="h-4 w-4" />
+                      </motion.div>
+                    ) : (
                       <Mic className="h-4 w-4" />
-                    </motion.div>
-                  ) : (
-                    <Mic className="h-4 w-4" />
-                  )}
-                </Button>
-              </div>
+                    )}
+                  </Button>
+                </div>
 
               <div className="flex flex-wrap gap-2">
                 {['Subsidy', 'Loan', 'Insurance', 'Seeds'].map((topic) => (
@@ -239,7 +246,29 @@ const GovernmentSchemes = () => {
           transition={{ delay: 0.2 }}
           className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6"
         >
-          {schemes.map((scheme, index) => (
+          {loading ? (
+            // Loading skeleton
+            Array(6).fill(0).map((_, index) => (
+              <Card key={index} className="h-[300px] animate-pulse">
+                <CardHeader>
+                  <div className="h-4 bg-muted rounded w-3/4"></div>
+                  <div className="h-6 bg-muted rounded w-full"></div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    <div className="h-4 bg-muted rounded w-1/2"></div>
+                    <div className="h-4 bg-muted rounded w-2/3"></div>
+                    <div className="h-8 bg-muted rounded w-full mt-4"></div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          ) : schemes.length === 0 ? (
+            <div className="col-span-full text-center py-8">
+              <p className="text-muted-foreground">No schemes found. Try a different search term.</p>
+            </div>
+          ) : (
+            schemes.map((scheme, index) => (
             <motion.div
               key={scheme.id}
               initial={{ opacity: 0, y: 20 }}
@@ -281,14 +310,20 @@ const GovernmentSchemes = () => {
                   </div>
 
                   <div className="pt-2">
-                    <Button variant="outline" className="w-full" size="sm">
+                    <Button 
+                      variant="outline" 
+                      className="w-full" 
+                      size="sm"
+                      onClick={() => setSelectedScheme(scheme.id)}
+                    >
                       View Details
                     </Button>
                   </div>
                 </CardContent>
               </Card>
             </motion.div>
-          ))}
+            ))
+          )}
         </motion.div>
 
         {/* Selected Scheme Details */}
@@ -413,7 +448,10 @@ const GovernmentSchemes = () => {
                       </Accordion>
 
                       <div className="mt-6 flex space-x-4">
-                        <Button className="flex-1 bg-accent hover:bg-accent/90">
+                        <Button 
+                          className="flex-1 bg-accent hover:bg-accent/90"
+                          onClick={() => handleApplyScheme(scheme.id)}
+                        >
                           <ExternalLink className="h-4 w-4 mr-2" />
                           Apply Now
                         </Button>
