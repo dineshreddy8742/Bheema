@@ -11,7 +11,9 @@ import {
   Settings,
   LogOut,
   Bot,
-  ShoppingCart
+  ShoppingCart,
+  User,
+  LogIn
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { cn } from '@/lib/utils';
@@ -62,6 +64,12 @@ const menuItems = [
     url: '/grocery-marketplace',
     icon: ShoppingCart,
     description: '🛒 Buy & sell produce'
+  },
+  {
+    title: 'Profile',
+    url: '/profile',
+    icon: User,
+    description: '👤 Account settings'
   }
 ];
 
@@ -71,6 +79,12 @@ const bottomMenuItems = [
     url: '/settings',
     icon: Settings,
     description: 'App preferences'
+  },
+  {
+    title: 'Login',
+    url: '/login',
+    icon: LogIn,
+    description: 'Sign in to account'
   }
 ];
 
