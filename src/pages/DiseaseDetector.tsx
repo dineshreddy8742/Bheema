@@ -6,8 +6,10 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Image as ImageIcon, UploadCloud, XCircle, Camera as CameraIcon } from 'lucide-react';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const DiseaseDetector: React.FC = () => {
+  const { translateSync } = useLanguage();
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isCameraOpen, setIsCameraOpen] = useState<boolean>(false);
@@ -106,7 +108,7 @@ const DiseaseDetector: React.FC = () => {
       <div className="container mx-auto py-8">
         <Card className="w-full max-w-2xl mx-auto">
           <CardHeader>
-            <CardTitle className="text-2xl font-bold text-center">Upload Image for Disease Detection</CardTitle>
+            <CardTitle className="text-2xl font-bold text-center">{translateSync('Upload Image for Disease Detection')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
             <div
@@ -115,11 +117,11 @@ const DiseaseDetector: React.FC = () => {
             >
               <input {...getInputProps()} />
               {isDragActive ? (
-                <p className="text-primary">Drop the image here ...</p>
+                <p className="text-primary">{translateSync('Drop the image here ...')}</p>
               ) : (
                 <div className="flex flex-col items-center space-y-2">
                   <UploadCloud className="h-12 w-12 text-gray-400" />
-                  <p className="text-gray-600">Drag 'n' drop an image here, or click to select one</p>
+                  <p className="text-gray-600">{translateSync("Drag 'n' drop an image here, or click to select one")}</p>
                   <p className="text-sm text-gray-500">(JPG, PNG, GIF)</p>
                 </div>
               )}
@@ -154,7 +156,7 @@ const DiseaseDetector: React.FC = () => {
               className="w-full py-2 text-lg"
             >
               <CameraIcon className="mr-2 h-5 w-5" />
-              Take Photo
+              {translateSync('Take Photo')}
             </Button>
 
             {cameraError && (
@@ -169,7 +171,7 @@ const DiseaseDetector: React.FC = () => {
                   className="mt-4 w-full py-2 text-lg"
                 >
                   <CameraIcon className="mr-2 h-5 w-5" />
-                  Capture Photo
+                  {translateSync('Capture Photo')}
                 </Button>
                 <Button
                   variant="ghost"
@@ -204,7 +206,7 @@ const DiseaseDetector: React.FC = () => {
               disabled={!selectedImage}
             >
               <ImageIcon className="mr-2 h-5 w-5" />
-              Analyze Image
+              {translateSync('Analyze Image')}
             </Button>
           </CardContent>
         </Card>

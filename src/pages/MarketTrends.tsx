@@ -15,8 +15,10 @@ import {
   CalendarDays,
   MapPin
 } from 'lucide-react';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const MarketTrends = () => {
+  const { translateSync } = useLanguage();
   const [query, setQuery] = useState('');
   const [isListening, setIsListening] = useState(false);
   const [selectedCrop, setSelectedCrop] = useState<string | null>(null);
@@ -109,10 +111,10 @@ const MarketTrends = () => {
           className="text-center"
         >
           <h1 className="text-hero text-primary font-indian mb-2">
-            📈 Market Trends
+            📈 {translateSync('Market Trends')}
           </h1>
           <p className="text-lg text-muted-foreground">
-            Real-time market prices and trends
+            {translateSync('Real-time market prices and trends')}
           </p>
         </motion.div>
 
@@ -126,7 +128,7 @@ const MarketTrends = () => {
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
                 <Mic className="h-5 w-5 text-primary" />
-                <span>Ask About Prices</span>
+                <span>{translateSync('Ask About Prices')}</span>
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -134,7 +136,7 @@ const MarketTrends = () => {
                 <div className="flex-1 relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                   <Input
-                    placeholder="Ask: What is tomato price today?"
+                    placeholder={translateSync("Ask: What is tomato price today?")}
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                     className="pl-10"
@@ -187,9 +189,9 @@ const MarketTrends = () => {
               <Card className="border-accent shadow-glow">
                 <CardHeader>
                   <CardTitle className="flex items-center justify-between">
-                    <span>{selectedCrop} Price Analysis</span>
+                    <span>{selectedCrop} {translateSync('Price Analysis')}</span>
                     <Badge variant="secondary" className="text-accent">
-                      Live Data
+                      {translateSync('Live Data')}
                     </Badge>
                   </CardTitle>
                 </CardHeader>
@@ -228,17 +230,17 @@ const MarketTrends = () => {
                           <div className="space-y-2">
                             <div className="flex items-center space-x-2 text-sm">
                               <MapPin className="h-4 w-4 text-muted-foreground" />
-                              <span className="font-medium">Market:</span>
+                              <span className="font-medium">{translateSync('Market')}:</span>
                               <span>{crop.market}</span>
                             </div>
                             <div className="flex items-center space-x-2 text-sm">
                               <CalendarDays className="h-4 w-4 text-muted-foreground" />
-                              <span className="font-medium">Updated:</span>
+                              <span className="font-medium">{translateSync('Updated')}:</span>
                               <span>2 hours ago</span>
                             </div>
                           </div>
                           <div className="p-3 bg-accent/10 rounded-lg">
-                            <h4 className="font-medium text-sm mb-1">AI Forecast</h4>
+                            <h4 className="font-medium text-sm mb-1">{translateSync('AI Forecast')}</h4>
                             <p className="text-sm text-muted-foreground">
                               {crop.forecast}
                             </p>
@@ -327,7 +329,7 @@ const MarketTrends = () => {
         >
           <Card>
             <CardHeader>
-              <CardTitle>Market Insights</CardTitle>
+              <CardTitle>{translateSync('Market Insights')}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
@@ -337,9 +339,9 @@ const MarketTrends = () => {
                   transition={{ delay: 0.4 }}
                   className="p-3 bg-green-50 border-l-4 border-green-400 rounded"
                 >
-                  <h4 className="font-medium text-green-800">Best Time to Sell</h4>
+                  <h4 className="font-medium text-green-800">{translateSync('Best Time to Sell')}</h4>
                   <p className="text-sm text-green-700 mt-1">
-                    Tomato prices are trending upward. Consider selling within the next 2-3 days for maximum profit.
+                    {translateSync('Tomato prices are trending upward. Consider selling within the next 2-3 days for maximum profit.')}
                   </p>
                 </motion.div>
 
@@ -349,9 +351,9 @@ const MarketTrends = () => {
                   transition={{ delay: 0.5 }}
                   className="p-3 bg-blue-50 border-l-4 border-blue-400 rounded"
                 >
-                  <h4 className="font-medium text-blue-800">Seasonal Trend</h4>
+                  <h4 className="font-medium text-blue-800">{translateSync('Seasonal Trend')}</h4>
                   <p className="text-sm text-blue-700 mt-1">
-                    Rice prices typically stabilize during this period. Good time for long-term planning.
+                    {translateSync('Rice prices typically stabilize during this period. Good time for long-term planning.')}
                   </p>
                 </motion.div>
 
@@ -361,9 +363,9 @@ const MarketTrends = () => {
                   transition={{ delay: 0.6 }}
                   className="p-3 bg-orange-50 border-l-4 border-orange-400 rounded"
                 >
-                  <h4 className="font-medium text-orange-800">Weather Impact</h4>
+                  <h4 className="font-medium text-orange-800">{translateSync('Weather Impact')}</h4>
                   <p className="text-sm text-orange-700 mt-1">
-                    Expected rainfall may affect onion prices. Monitor closely for the next week.
+                    {translateSync('Expected rainfall may affect onion prices. Monitor closely for the next week.')}
                   </p>
                 </motion.div>
               </div>

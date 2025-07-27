@@ -4,6 +4,7 @@ import { Layout } from '@/components/Layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { AlertCircle, RefreshCw, Thermometer, Droplets, Wind, Sun, Lightbulb, Leaf, CloudRain, Waves, CheckCircle } from 'lucide-react';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface SensorData {
   temperature: number;
@@ -13,6 +14,7 @@ interface SensorData {
 }
 
 const CropMonitor = () => {
+  const { translateSync } = useLanguage();
   const [sensorData, setSensorData] = useState<SensorData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notifications, setNotifications] = useState<string[]>([]);
@@ -80,7 +82,7 @@ const CropMonitor = () => {
           className="flex flex-col items-center justify-center min-h-[400px] space-y-6 bg-gradient-to-br from-red-50 to-red-100 rounded-3xl shadow-2xl p-8 border-4 border-red-300"
         >
           <AlertCircle className="h-24 w-24 text-red-500 animate-pulse-slow" />
-          <h2 className="text-4xl font-extrabold text-red-700 text-center">Error Fetching Data</h2>
+          <h2 className="text-4xl font-extrabold text-red-700 text-center">{translateSync('Error Fetching Data')}</h2>
           <p className="text-xl text-red-600 text-center max-w-lg leading-relaxed">{error}</p>
           <Button
             onClick={fetchSensorData}
@@ -88,7 +90,7 @@ const CropMonitor = () => {
             className="mt-6 text-lg px-8 py-4 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
           >
             <RefreshCw className="h-6 w-6 mr-3 animate-spin-slow" />
-            Retry Data Fetch
+            {translateSync('Retry Data Fetch')}
           </Button>
         </motion.div>
       );
@@ -177,7 +179,7 @@ const CropMonitor = () => {
                 >
                   <Thermometer className="h-10 w-10" />
                 </motion.div>
-                <span>Temperature</span>
+                <span>{translateSync('Temperature')}</span>
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -199,7 +201,7 @@ const CropMonitor = () => {
                 >
                   <Droplets className="h-10 w-10" />
                 </motion.div>
-                <span>Humidity</span>
+                <span>{translateSync('Humidity')}</span>
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -221,7 +223,7 @@ const CropMonitor = () => {
                 >
                   <Leaf className="h-10 w-10" />
                 </motion.div>
-                <span>Moisture</span>
+                <span>{translateSync('Moisture')}</span>
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -243,7 +245,7 @@ const CropMonitor = () => {
                 >
                   <Sun className="h-10 w-10" />
                 </motion.div>
-                <span>Light</span>
+                <span>{translateSync('Light')}</span>
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -270,10 +272,10 @@ const CropMonitor = () => {
           className="text-center mb-10"
         >
           <h1 className="text-6xl font-extrabold text-green-700 mb-4 tracking-tight leading-tight drop-shadow-md">
-            <span className="inline-block animate-pulse mr-3 text-7xl">🌱</span> Crop Monitor
+            <span className="inline-block animate-pulse mr-3 text-7xl">🌱</span> {translateSync('Crop Monitor')}
           </h1>
           <p className="text-xl md:text-2xl text-gray-600 font-medium max-w-2xl mx-auto">
-            Real-time environmental insights for thriving crops and sustainable farming.
+            {translateSync('Real-time environmental insights for thriving crops and sustainable farming.')}
           </p>
           {lastUpdated && (
             <motion.p
@@ -306,7 +308,7 @@ const CropMonitor = () => {
           <Card className="bg-white shadow-2xl rounded-3xl p-6 border border-gray-100 transform hover:scale-[1.005] transition-transform duration-300">
             <CardHeader className="pb-4 border-b border-gray-100 mb-4">
               <CardTitle className="text-3xl font-bold text-gray-800 flex items-center">
-                <Waves className="h-8 w-8 mr-3 text-blue-600 animate-wave" /> Recent Alerts & Notifications
+                <Waves className="h-8 w-8 mr-3 text-blue-600 animate-wave" /> {translateSync('Recent Alerts & Notifications')}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -328,7 +330,7 @@ const CropMonitor = () => {
               ) : (
                 <p className="text-muted-foreground text-center py-8 text-lg font-medium">
                   <CheckCircle className="h-10 w-10 text-green-500 mx-auto mb-3" />
-                  All systems nominal. No recent notifications.
+                  {translateSync('All systems nominal. No recent notifications.')}
                 </p>
               )}
             </CardContent>

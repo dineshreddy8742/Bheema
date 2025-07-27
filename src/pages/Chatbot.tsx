@@ -28,12 +28,12 @@ interface CustomSpeechRecognitionEvent extends Event {
 // Using AIMessage from service instead of local interface
 
 const Chatbot = () => {
-  const { translate, currentLanguage } = useLanguage();
+  const { translate, translateSync, currentLanguage } = useLanguage();
   const { toast } = useToast();
   const [messages, setMessages] = useState<AIMessage[]>([
     {
       id: '1',
-      content: 'Hello! I\'m your AI farming assistant. I can help you with crop monitoring, disease identification, market prices, and weather forecasts. How can I assist you today?',
+      content: translateSync('Hello! I\'m your AI farming assistant. I can help you with crop monitoring, disease identification, market prices, and weather forecasts. How can I assist you today?'),
       sender: 'bot',
       timestamp: new Date(),
       confidence: 1.0
@@ -195,11 +195,11 @@ const Chatbot = () => {
   };
 
   const quickQuestions = [
-    'What is the weather forecast?',
-    'Check my crop health',
-    'Current market prices',
-    'Identify plant disease',
-    'Government schemes available'
+    translateSync('What is the weather forecast?'),
+    translateSync('Check my crop health'),
+    translateSync('Current market prices'),
+    translateSync('Identify plant disease'),
+    translateSync('Government schemes available')
   ];
 
   return (
@@ -212,15 +212,15 @@ const Chatbot = () => {
           className="text-center"
         >
           <h1 className="text-hero text-primary font-indian mb-2">
-            🤖 AI Farming Assistant
+            🤖 {translateSync('AI Farming Assistant')}
           </h1>
           <p className="text-lg text-muted-foreground">
-            Get instant help with your farming questions
+            {translateSync('Get instant help with your farming questions')}
           </p>
           <div className="flex justify-center items-center space-x-4 mt-4">
             <Badge variant="secondary" className="flex items-center space-x-1">
               <Sparkles className="h-3 w-3" />
-              <span>AI Powered</span>
+              <span>{translateSync('AI Powered')}</span>
             </Badge>
             <Button
               variant="outline"
@@ -229,7 +229,7 @@ const Chatbot = () => {
               className="flex items-center space-x-2"
             >
               {voiceEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
-              <span>{voiceEnabled ? 'Voice On' : 'Voice Off'}</span>
+              <span>{voiceEnabled ? translateSync('Voice On') : translateSync('Voice Off')}</span>
             </Button>
           </div>
         </motion.div>
@@ -244,7 +244,7 @@ const Chatbot = () => {
             <CardHeader className="border-b">
               <CardTitle className="flex items-center space-x-2">
                 <Bot className="h-5 w-5 text-primary" />
-                <span>Chat with AI Assistant</span>
+                <span>{translateSync('Chat with AI Assistant')}</span>
                 {isSpeaking && (
                   <motion.div
                     animate={{ scale: [1, 1.2, 1] }}
@@ -378,7 +378,7 @@ const Chatbot = () => {
                     value={inputText}
                     onChange={(e) => setInputText(e.target.value)}
                     onKeyPress={handleKeyPress}
-                    placeholder="Ask about farming, weather, diseases, market prices..."
+                    placeholder={translateSync("Ask about farming, weather, diseases, market prices...")}
                     className="pr-12"
                   />
                   <Button
@@ -416,10 +416,10 @@ const Chatbot = () => {
           className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"
         >
           {[
-            { icon: '🌾', title: 'Crop Monitoring', desc: 'Get real-time crop health insights' },
-            { icon: '🦠', title: 'Disease Detection', desc: 'AI-powered plant disease identification' },
-            { icon: '📈', title: 'Market Analysis', desc: 'Latest prices and market trends' },
-            { icon: '🌤️', title: 'Weather Forecasts', desc: 'Accurate weather predictions' }
+            { icon: '🌾', title: translateSync('Crop Monitoring'), desc: translateSync('Get real-time crop health insights') },
+            { icon: '🦠', title: translateSync('Disease Detection'), desc: translateSync('AI-powered plant disease identification') },
+            { icon: '📈', title: translateSync('Market Analysis'), desc: translateSync('Latest prices and market trends') },
+            { icon: '🌤️', title: translateSync('Weather Forecasts'), desc: translateSync('Accurate weather predictions') }
           ].map((feature, index) => (
             <motion.div
               key={feature.title}

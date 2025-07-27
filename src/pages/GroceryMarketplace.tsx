@@ -50,7 +50,7 @@ interface CartItem extends Product {
 }
 
 const GroceryMarketplace = () => {
-  const { translate, currentLanguage } = useLanguage();
+  const { translateSync } = useLanguage();
   const { toast } = useToast();
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [searchQuery, setSearchQuery] = useState('');
@@ -266,10 +266,10 @@ const GroceryMarketplace = () => {
           className="text-center"
         >
           <h1 className="text-hero text-primary font-indian mb-2">
-            🛒 Grocery Marketplace
+            🛒 {translateSync('Grocery Marketplace')}
           </h1>
           <p className="text-lg text-muted-foreground">
-            Buy and sell fresh groceries directly from farmers
+            {translateSync('Buy and sell fresh groceries directly from farmers')}
           </p>
         </motion.div>
 
@@ -283,7 +283,7 @@ const GroceryMarketplace = () => {
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <Input
-              placeholder="Search products, sellers..."
+              placeholder={translateSync("Search products, sellers...")}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10"
@@ -296,7 +296,7 @@ const GroceryMarketplace = () => {
               className="bg-accent hover:bg-accent/90"
             >
               <Plus className="h-4 w-4 mr-2" />
-              Sell Product
+              {translateSync('Sell Product')}
             </Button>
             
             <Dialog open={showCart} onOpenChange={setShowCart}>
@@ -312,11 +312,11 @@ const GroceryMarketplace = () => {
               </DialogTrigger>
               <DialogContent className="sm:max-w-[425px]">
                 <DialogHeader>
-                  <DialogTitle>Your Cart</DialogTitle>
+                  <DialogTitle>{translateSync('Your Cart')}</DialogTitle>
                 </DialogHeader>
                 <div className="py-4 space-y-4">
                   {cartItems.length === 0 ? (
-                    <p className="text-center text-muted-foreground">Your cart is empty.</p>
+                    <p className="text-center text-muted-foreground">{translateSync('Your cart is empty.')}</p>
                   ) : (
                     <div className="space-y-3">
                       {cartItems.map(item => (
@@ -344,11 +344,11 @@ const GroceryMarketplace = () => {
                 {cartItems.length > 0 && (
                   <DialogFooter className="flex flex-col sm:flex-col sm:space-x-0 sm:space-y-2">
                     <div className="flex justify-between items-center font-bold text-lg">
-                      <span>Total:</span>
+                      <span>{translateSync('Total:')}</span>
                       <span>₹{cartItems.reduce((total, item) => total + (item.price * item.cartQuantity), 0).toFixed(2)}</span>
                     </div>
                     <Button className="w-full">
-                      Proceed to Payment
+                      {translateSync('Proceed to Payment')}
                     </Button>
                   </DialogFooter>
                 )}
