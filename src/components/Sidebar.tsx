@@ -13,7 +13,8 @@ import {
   Bot,
   ShoppingCart,
   User,
-  LogIn
+  LogIn,
+  Snowflake
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { cn } from '@/lib/utils';
@@ -52,6 +53,12 @@ const menuItems = [
     url: '/government-schemes',
     icon: Building2,
     description: '🏛️ Available Benefits'
+  },
+  {
+    title: 'Cold Storage',
+    url: '/cold-storage',
+    icon: Snowflake,
+    description: '❄️ Storage Access'
   },
   {
     title: 'AI Assistant',

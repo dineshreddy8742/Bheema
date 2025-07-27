@@ -1,8 +1,11 @@
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Layout } from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { ColdStorageForm } from "@/components/ColdStorageForm";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { 
   Snowflake, 
   Thermometer, 
@@ -19,6 +22,50 @@ import {
 } from "lucide-react";
 
 const ColdStorage = () => {
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const { translate, translateSync, currentLanguage } = useLanguage();
+  const [translatedTexts, setTranslatedTexts] = useState<Record<string, string>>({});
+
+  // Translate static texts when language changes
+  useEffect(() => {
+    const translateStaticTexts = async () => {
+      if (currentLanguage.code === 'en') {
+        setTranslatedTexts({});
+        return;
+      }
+
+      const textsToTranslate = [
+        'Cold Storage Access',
+        'Preserve Freshness. Reduce Waste. Increase Profits.',
+        'What is Cold Storage?',
+        'Why Farmers Need Cold Storage',
+        'Types of Cold Storage Available',
+        'How to Get Access',
+        'Government Support & Schemes',
+        'Register for Cold Storage',
+        'Longer Shelf Life',
+        'Better Market Prices',
+        'Reduce Post-Harvest Loss',
+        'Direct Supply to Markets'
+      ];
+
+      const translated: Record<string, string> = {};
+      
+      for (const text of textsToTranslate) {
+        try {
+          translated[text] = await translate(text);
+        } catch (error) {
+          translated[text] = text;
+        }
+      }
+      
+      setTranslatedTexts(translated);
+    };
+
+    translateStaticTexts();
+  }, [currentLanguage, translate]);
+
+  const t = (text: string) => translatedTexts[text] || translateSync(text) || text;
   const fadeInUp = {
     initial: { opacity: 0, y: 60 },
     animate: { opacity: 1, y: 0 },
@@ -102,11 +149,11 @@ const ColdStorage = () => {
           <div className="flex items-center justify-center gap-3 mb-4">
             <Snowflake className="h-12 w-12 text-blue-600" />
             <h1 className="text-4xl md:text-6xl font-bold text-gray-800">
-              Cold Storage Access
+              {t('Cold Storage Access')}
             </h1>
           </div>
           <p className="text-xl md:text-2xl text-gray-600 mb-2">
-            🧺 Preserve Freshness. Reduce Waste. Increase Profits.
+            🧺 {t('Preserve Freshness. Reduce Waste. Increase Profits.')}
           </p>
           <p className="text-lg text-gray-600 max-w-4xl mx-auto">
             With modern cold storage facilities, farmers can now store their vegetables, fruits, and perishables safely for extended periods. This ensures better prices, less spoilage, and year-round market availability.
@@ -124,7 +171,7 @@ const ColdStorage = () => {
             <Card className="bg-white shadow-xl rounded-2xl p-6">
               <CardHeader>
                 <CardTitle className="text-2xl font-bold text-green-600 flex items-center gap-2">
-                  <span className="text-2xl">🟢</span> What is Cold Storage?
+                  <span className="text-2xl">🟢</span> {t('What is Cold Storage?')}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -255,9 +302,12 @@ const ColdStorage = () => {
                       whileHover={{ scale: 1.05 }}
                       transition={{ duration: 0.2 }}
                     >
-                      <Button className="bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6 rounded-xl transition duration-300 text-lg">
-                        Register for Cold Storage
-                      </Button>
+                        <Button 
+                          className="bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6 rounded-xl transition duration-300 text-lg"
+                          onClick={() => setIsFormOpen(true)}
+                        >
+                          {t('Register for Cold Storage')}
+                        </Button>
                     </motion.div>
                   </div>
                 </div>
@@ -316,6 +366,12 @@ const ColdStorage = () => {
             </Card>
           </motion.div>
         </div>
+
+        {/* Cold Storage Registration Form */}
+        <ColdStorageForm 
+          isOpen={isFormOpen} 
+          onClose={() => setIsFormOpen(false)} 
+        />
       </div>
     </Layout>
   );
