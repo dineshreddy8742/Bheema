@@ -151,7 +151,7 @@ const Chatbot = () => {
     if (!isRecording) {
       // Start voice recognition
       try {
-        const recognition = new (window as Window & typeof globalThis).webkitSpeechRecognition();
+        const recognition = new (window as any).webkitSpeechRecognition();
         recognition.lang = currentLanguage.code === 'en' ? 'en-US' : 'hi-IN';
         recognition.continuous = false;
         recognition.interimResults = false;
