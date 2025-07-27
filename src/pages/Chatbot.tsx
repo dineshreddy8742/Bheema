@@ -21,6 +21,10 @@ import {
   Sparkles
 } from 'lucide-react';
 
+interface CustomSpeechRecognitionEvent extends Event {
+  results: SpeechRecognitionResultList;
+}
+
 // Using AIMessage from service instead of local interface
 
 const Chatbot = () => {
@@ -147,12 +151,12 @@ const Chatbot = () => {
     if (!isRecording) {
       // Start voice recognition
       try {
-        const recognition = new (window as any).webkitSpeechRecognition();
+        const recognition = new (window as Window & typeof globalThis).webkitSpeechRecognition();
         recognition.lang = currentLanguage.code === 'en' ? 'en-US' : 'hi-IN';
         recognition.continuous = false;
         recognition.interimResults = false;
         
-        recognition.onresult = async (event: any) => {
+        recognition.onresult = async (event: CustomSpeechRecognitionEvent) => {
           const transcript = event.results[0][0].transcript;
           setInputText(transcript);
           setIsRecording(false);

@@ -1,4 +1,4 @@
-import React, { useState, useContext } from 'react';
+import React, { useState } from 'react';
 import { motion, Variants } from 'framer-motion';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,12 +6,14 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { LanguageContext } from "@/contexts/LanguageContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { useToast } from "@/components/ui/use-toast";
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { toast } from 'sonner';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Layout } from "@/components/Layout";
+import { toast, Toaster } from 'sonner';
 import {
   Globe,
   Bell,
@@ -85,6 +87,7 @@ const Settings = () => {
             variants={containerVariants}
             className="max-w-4xl mx-auto space-y-8"
           >
+            <Toaster />
             {/* Header */}
             <motion.div variants={itemVariants} className="text-center space-y-4">
               <h1 className="text-4xl font-bold bg-gradient-to-r from-primary via-accent to-primary/80 bg-clip-text text-transparent font-indian">
@@ -145,6 +148,18 @@ const Settings = () => {
                           ...prev,
                           profile: { ...prev.profile, farmSize: e.target.value }
                         }))}
+                      />
+                    </div>
+                    <div className="space-y-2 md:col-span-2">
+                      <Label htmlFor="mainCrops">Main Crops</Label>
+                      <Textarea
+                        id="mainCrops"
+                        value={settings.profile.mainCrops}
+                        onChange={(e) => setSettings(prev => ({
+                          ...prev,
+                          profile: { ...prev.profile, mainCrops: e.target.value }
+                        }))}
+                        placeholder="e.g., Rice, Wheat, Cotton"
                       />
                     </div>
                   </div>
@@ -393,6 +408,39 @@ const Settings = () => {
                       </div>
                     </div>
                   )}
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            {/* Theme Settings */}
+            <motion.div variants={itemVariants}>
+              <Card className="border-accent/20 shadow-soft">
+                <CardHeader className="space-y-1">
+                  <div className="flex items-center space-x-3">
+                    <Palette className="h-6 w-6 text-primary" />
+                    <CardTitle className="text-xl font-indian">Theme Settings</CardTitle>
+                  </div>
+                  <CardDescription>
+                    Personalize the app's appearance
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="space-y-3">
+                    <Label htmlFor="appTheme">App Theme</Label>
+                    <Select
+                      value={settings.theme}
+                      onValueChange={(value) => setSettings(prev => ({ ...prev, theme: value }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select theme" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="light">Light</SelectItem>
+                        <SelectItem value="dark">Dark</SelectItem>
+                        <SelectItem value="system">System</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </CardContent>
               </Card>
             </motion.div>
