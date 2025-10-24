@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { ColdStorageForm } from "@/components/ColdStorageForm";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useToast } from "@/components/ui/use-toast";
+import eventBus from "@/lib/eventBus";
 import { 
   Snowflake, 
   Thermometer, 
@@ -33,6 +34,23 @@ const ColdStorage = () => {
   const { translate, translateSync, currentLanguage } = useLanguage();
   const [translatedTexts, setTranslatedTexts] = useState<Record<string, string>>({});
   const { toast } = useToast();
+
+  useEffect(() => {
+    const handleOpenForm = () => setIsFormOpen(true);
+    const handleClickElement = ({ target }: { target: string }) => {
+      if (target === 'Register for Storage') {
+        setIsFormOpen(true);
+      }
+    };
+
+    eventBus.on('open-cold-storage-form', handleOpenForm);
+    eventBus.on('click-element', handleClickElement);
+
+    return () => {
+      eventBus.remove('open-cold-storage-form', handleOpenForm);
+      eventBus.remove('click-element', handleClickElement);
+    };
+  }, []);
 
   // Translate static texts when language changes
   useEffect(() => {

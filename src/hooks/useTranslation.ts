@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useLanguage } from '@/contexts/LanguageContext';
+import { useLanguage } from '@/contexts/language-utils';
 
 export const useTranslation = (textsToTranslate: string[]) => {
   const { translate, translateSync, currentLanguage } = useLanguage();

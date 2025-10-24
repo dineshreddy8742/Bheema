@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { useLanguage } from '@/contexts/LanguageContext';
+import { useLanguage } from '@/contexts/language-utils';
 import { Eye, EyeOff, Leaf } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 

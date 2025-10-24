@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Navbar } from './Navbar';
 import { Sidebar } from './Sidebar';
-import { VoiceAssistant } from './VoiceAssistant';
+import eventBus from '@/lib/eventBus';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -10,6 +10,21 @@ interface LayoutProps {
 
 export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    const handleClickElement = (event: CustomEvent<{ target: string }>) => {
+      const element = document.querySelector(event.detail.target) as HTMLElement;
+      if (element) {
+        element.click();
+      }
+    };
+
+    eventBus.on('click-element', handleClickElement);
+
+    return () => {
+      eventBus.remove('click-element', handleClickElement);
+    };
+  }, []);
 
   return (
     <div className="min-h-screen bg-rural-gradient relative overflow-hidden">
@@ -71,9 +86,6 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           </motion.div>
         </main>
       </div>
-
-      {/* Voice Assistant */}
-      <VoiceAssistant />
     </div>
   );
 };

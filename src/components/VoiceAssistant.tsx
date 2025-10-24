@@ -1,201 +1,673 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Mic, MicOff, Volume2, VolumeX } from 'lucide-react';
+import { Mic, MessageSquare, Send, Volume2, X } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from './ui/button';
-import { Card, CardContent } from './ui/card';
-import { useLanguage } from '@/contexts/LanguageContext';
+import { AgentInterface } from './AgentInterface';
+import { useLanguage } from '@/contexts/language-utils';
+import { aiAssistantService, AIMessage } from '@/services/aiAssistantService';
+
+import eventBus from '@/lib/eventBus';
+import { workflowEngine } from '@/services/workflowEngine';
+import { dynamicWorkflowEngine } from '@/services/dynamicWorkflowEngine';
+
+import coldStorageWorkflow from '@/workflows/coldStorage.workflow.json';
+import diseaseDetectorWorkflow from '@/workflows/diseaseDetector.workflow.json';
+import cropRecommendationWorkflow from '@/workflows/cropRecommendation.workflow.json';
+import marketTrendsWorkflow from '@/workflows/marketTrends.workflow.json';
+import governmentSchemesWorkflow from '@/workflows/governmentSchemes.workflow.json';
+import groceryMarketplaceWorkflow from '@/workflows/groceryMarketplace.workflow.json';
+import communityWorkflow from '@/workflows/community.workflow.json';
+import profileWorkflow from '@/workflows/profile.workflow.json';
+import settingsWorkflow from '@/workflows/settings.workflow.json';
+
+import { translateText, detectLanguage } from '@/services/translationService';
 
 export const VoiceAssistant: React.FC = () => {
-  const { translateSync } = useLanguage();
+  const navigate = useNavigate();
+  const { currentLanguage } = useLanguage();
+  const [isWorkflowActive, setIsWorkflowActive] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
-  const [lastCommand, setLastCommand] = useState<string>('');
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isAgentVisible, setIsAgentVisible] = useState(false);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [conversation, setConversation] = useState<AIMessage[]>([]);
+  const recognitionRef = useRef<any | null>(null);
+
+  const [isThinking, setIsThinking] = useState(false);
+  const [listeningText, setListeningText] = useState("");
+  const [status, setStatus] = useState<'idle' | 'listening' | 'thinking' | 'speaking' | 'error'>('idle');
+  const [secureContextError, setSecureContextError] = useState<string | null>(null);
+
+
+  const [isVoiceInteraction, setIsVoiceInteraction] = useState(false);
+
+  useEffect(() => {
+    if (!window.isSecureContext) {
+      setSecureContextError("Voice features are disabled on insecure connections. Please use HTTPS.");
+    }
+  }, []);
+
+  const startListening = () => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      console.error('Speech recognition not supported in this browser.');
+      return;
+    }
+
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+    }
+
+    const recognition = new SpeechRecognition();
+    recognitionRef.current = recognition;
+    
+    const langMap: { [key: string]: string } = {
+      en: 'en-US',
+      hi: 'hi-IN',
+      te: 'te-IN',
+      ta: 'ta-IN',
+      kn: 'kn-IN',
+      mr: 'mr-IN',
+    };
+    
+    recognition.lang = langMap[currentLanguage.code] || 'en-US';
+    recognition.interimResults = true;
+    recognition.continuous = false;
+
+    recognition.onstart = () => {
+      setIsListening(true);
+      setIsVoiceInteraction(true);
+      setListeningText("Bheema is listening...");
+      setStatus('listening');
+    };
+
+    recognition.onresult = (event: any) => {
+      let interimTranscript = '';
+      let finalTranscript = '';
+      for (let i = 0; i < event.results.length; ++i) {
+        if (event.results[i].isFinal) {
+          finalTranscript += event.results[i][0].transcript;
+        } else {
+          interimTranscript += event.results[i][0].transcript;
+        }
+      }
+      setListeningText(interimTranscript + finalTranscript);
+
+      if (finalTranscript) {
+        const userMessage: AIMessage = {
+          id: new Date().toISOString(),
+          content: finalTranscript,
+          sender: 'user',
+          timestamp: new Date(),
+          isVoice: true,
+        };
+        setConversation(prev => [...prev, userMessage]);
+        setIsThinking(true);
+        setStatus('thinking');
+        // Process the message immediately without artificial delay
+        processUserMessage(finalTranscript, undefined, true);
+        recognition.stop();
+      }
+    };
+
+    recognition.onend = () => {
+      setIsListening(false);
+      setListeningText("");
+      setStatus('idle');
+      // Reset voice interaction flag when speech recognition ends completely
+      setIsVoiceInteraction(false);
+    };
+
+    recognition.onerror = (event: any) => {
+      console.error('Speech recognition error:', event.error);
+      setIsListening(false);
+      setListeningText("");
+      setStatus('error');
+      setTimeout(() => {
+        setStatus('idle');
+      }, 2000);
+    };
+
+    recognition.start();
+  };
+
+  const speakText = useCallback(async (text: string, detectedLang?: string) => {
+    setIsSpeaking(true);
+    setStatus('speaking');
+    setIsThinking(false); // Reset thinking status when we start speaking
+
+    // Detect the language of the text being spoken if not provided
+    let textLanguage = detectedLang || currentLanguage.code;
+    if (!detectedLang) {
+      try {
+        textLanguage = await detectLanguage(text);
+      } catch (error) {
+        console.warn('Language detection for speech text failed, using current language:', error);
+      }
+    }
+
+    // Use the voice service to handle speaking
+    import('@/services/voiceService').then(({ voiceService }) => {
+      voiceService.setLanguage(textLanguage);
+      voiceService.speak(text);
+    });
+
+    // Set up a listener for when speech ends
+    const handleSpeechEnd = () => {
+      setIsSpeaking(false);
+      setStatus('idle');
+      // Don't reset isVoiceInteraction here - keep it true for workflow interactions
+      // Only reset when the entire voice session ends
+      if (dynamicWorkflowEngine.isPaused()) {
+        startListening();
+      }
+      eventBus.remove('speech-ended', handleSpeechEnd);
+    };
+
+    eventBus.on('speech-ended', handleSpeechEnd);
+  }, [currentLanguage.code]);
+
+  useEffect(() => {
+    const handleWorkflowMessage = (event: CustomEvent<AIMessage>) => {
+        console.log("Received workflow message:", event.detail);
+        // Check if message already exists to avoid duplicates
+        setConversation(prev => {
+            const exists = prev.some(msg => msg.id === event.detail.id);
+            if (!exists) {
+                return [...prev, event.detail];
+            }
+            return prev;
+        });
+    };
+
+    eventBus.on("workflow-message", handleWorkflowMessage);
+
+    return () => {
+        eventBus.remove("workflow-message", handleWorkflowMessage);
+    };
+  }, []);
+
+  useEffect(() => {
+    const startSession = async () => {
+      try {
+        const sessionData = await aiAssistantService.startSession('user123', 'initial', currentLanguage.code);
+        setSessionId(sessionData.session_id);
+        setConversation([{
+          id: 'greeting',
+          content: sessionData.greeting,
+          sender: 'bot',
+          timestamp: new Date()
+        }]);
+      } catch (error) {
+        console.error('Error starting session:', error);
+      }
+    };
+    startSession();
+
+    const handleSpeak = async (event: CustomEvent<string>) => {
+      console.log("Received speak event with text:", event.detail);
+      // Reset thinking status when we start speaking, but only for voice interactions
+      if (isVoiceInteraction) {
+          setIsThinking(false);
+          setStatus('speaking');
+      } else {
+          // For non-voice interactions, just set status to idle
+          setStatus('idle');
+      }
+      // The text should already be in the correct language from the workflow
+      // Just speak it directly
+      speakText(event.detail, currentLanguage.code);
+    };
+
+    eventBus.on("speak", handleSpeak);
+
+    return () => {
+      eventBus.remove("speak", handleSpeak);
+    };
+  }, [currentLanguage.code, speakText]);
+
+  useEffect(() => {
+    const handleNavigate = (event: CustomEvent<{ path: string }>) => {
+      navigate(event.detail.path);
+    };
+
+    eventBus.on('navigate', handleNavigate);
+
+    return () => {
+      eventBus.remove('navigate', handleNavigate);
+    };
+  }, [navigate]);
+
+  useEffect(() => {
+    const handleWorkflowCompleted = () => {
+      console.log("Workflow completed, setting isWorkflowActive to false.");
+      setIsWorkflowActive(false);
+    };
+
+    const handleUploadFile = (event: CustomEvent<{ filePath: string }>) => {
+      console.log("Handling file upload:", event.detail.filePath);
+      // Implement file upload logic here
+    };
+
+    const handleTakePhoto = (event: CustomEvent<{ selector: string }>) => {
+      console.log("Handling take photo:", event.detail.selector);
+      // Navigate to disease detector page and trigger camera
+      navigate('/disease-detector');
+      setTimeout(() => {
+        eventBus.dispatch('trigger-camera', {});
+      }, 1000);
+    };
+
+    const handleCheckStatus = (event: CustomEvent<{ target: string }>) => {
+      console.log("Handling check status:", event.detail.target);
+      // Implement status checking logic here
+    };
+
+    eventBus.on('workflow-completed', handleWorkflowCompleted);
+    eventBus.on('upload-file', handleUploadFile);
+    eventBus.on('take-photo', handleTakePhoto);
+    eventBus.on('check-status', handleCheckStatus);
+
+    return () => {
+      eventBus.remove('workflow-completed', handleWorkflowCompleted);
+      eventBus.remove('upload-file', handleUploadFile);
+      eventBus.remove('take-photo', handleTakePhoto);
+      eventBus.remove('check-status', handleCheckStatus);
+    };
+  }, []);
+
+  useEffect(() => {
+    // This is now for loading saved workflows, not the static JSON ones.
+    // The logic for this will need to be implemented.
+    // workflowEngine.loadWorkflows([]);
+  }, []);
 
   const handleVoiceToggle = () => {
-    setIsListening(!isListening);
-    // TODO: Implement actual voice recognition
-    if (!isListening) {
-      // Simulate listening
-      setTimeout(() => {
-        setIsListening(false);
-        setLastCommand('ಈಗಿನ ಟೊಮೇಟೋ ಬೆಲೆ ಏನು?'); // "What is the price of tomatoes today?"
-      }, 3000);
+    if (isListening) {
+      stopListening();
+    } else {
+      startListening();
     }
   };
 
-  const speakText = (text: string) => {
-    setIsSpeaking(true);
-    // TODO: Implement actual text-to-speech
-    setTimeout(() => {
-      setIsSpeaking(false);
-    }, 2000);
+  const stopListening = () => {
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+    }
+    setIsListening(false);
+    setListeningText("");
+    setStatus('idle');
+  };
+
+  const handleCancelSpeaking = () => {
+    speechSynthesis.cancel();
+    setIsSpeaking(false);
+  };
+
+  const processUserMessage = async (message: string, file?: File, isVoiceInput: boolean = false) => {
+    console.log('processUserMessage called with isVoiceInput:', isVoiceInput);
+
+    // Detect the language of the user's message
+    let detectedLanguage = currentLanguage.code;
+    try {
+      detectedLanguage = await detectLanguage(message);
+    } catch (error) {
+      console.warn('Language detection failed, using current language:', error);
+    }
+
+    // Handle simple greetings and basic queries without requiring a session
+    const lowerMessage = message.toLowerCase().trim();
+    const isGreeting = ['hi', 'hello', 'hey', 'good morning', 'good afternoon', 'good evening', 'how are you', 'hey hi how are you', 'tell me a joke'].includes(lowerMessage) ||
+                      lowerMessage.startsWith('hi ') ||
+                      lowerMessage.startsWith('hello ') ||
+                      lowerMessage.startsWith('good morning') ||
+                      lowerMessage.startsWith('good afternoon') ||
+                      lowerMessage.startsWith('good evening');
+
+    // Check for joke request in any language
+    const isJokeRequest = lowerMessage.includes('joke') || lowerMessage.includes('joke cheppa') || lowerMessage.includes('joke cheppu') || lowerMessage.includes('oka joke cheppa') || lowerMessage.includes('oka joke cheppu') || lowerMessage.includes('joke bol') || lowerMessage.includes('joke sunao') || lowerMessage.includes('joke sollunga') || lowerMessage.includes('joke heli') || lowerMessage.includes('joke parayuka') || lowerMessage.includes('joke boliye');
+
+    // Check for basic farming-related queries that can be handled without session
+    const isBasicQuery = lowerMessage.includes('weather') || lowerMessage.includes('market') || lowerMessage.includes('price') || lowerMessage.includes('crop') || lowerMessage.includes('disease') || lowerMessage.includes('pesticide') || lowerMessage.includes('fertilizer') || lowerMessage.includes('scheme') || lowerMessage.includes('government') || lowerMessage.includes('loan') || lowerMessage.includes('subsidy');
+
+    // Handle specific market price queries
+    if (lowerMessage.includes('market price') || lowerMessage.includes('price of')) {
+      const crops = ['tomato', 'potato', 'onion', 'wheat', 'rice', 'beans', 'cabbage'];
+      const crop = crops.find(c => lowerMessage.includes(c));
+      if (crop) {
+        // Navigate to market trends page and set the crop
+        navigate('/market-trends');
+        setTimeout(() => {
+          eventBus.dispatch('fill-market-trends-field', { field: 'commodity', value: crop });
+        }, 1000);
+
+        // Use pre-translated responses for each crop
+        const cropResponses = {
+          tomato: "I've opened the market trends page for tomato. Please select your location to see current prices.",
+          potato: "I've opened the market trends page for potato. Please select your location to see current prices.",
+          onion: "I've opened the market trends page for onion. Please select your location to see current prices.",
+          wheat: "I've opened the market trends page for wheat. Please select your location to see current prices.",
+          rice: "I've opened the market trends page for rice. Please select your location to see current prices.",
+          beans: "I've opened the market trends page for beans. Please select your location to see current prices.",
+          cabbage: "I've opened the market trends page for cabbage. Please select your location to see current prices."
+        };
+
+        let responseText = cropResponses[crop as keyof typeof cropResponses];
+        // Translate response to detected language if not English
+        if (detectedLanguage !== 'en') {
+          try {
+            responseText = await translateText(responseText, detectedLanguage, 'en');
+          } catch (error) {
+            console.warn('Translation failed for market price response:', error);
+          }
+        }
+        const botMessage: AIMessage = {
+          id: `${new Date().toISOString()}-bot`,
+          content: responseText,
+          sender: 'bot',
+          timestamp: new Date(),
+        };
+        setConversation(prev => [...prev, botMessage]);
+        speakText(responseText, detectedLanguage);
+        setIsThinking(false);
+        setStatus('idle');
+        return;
+      }
+    }
+
+    if (isGreeting || isJokeRequest || isBasicQuery) {
+      const responses = {
+        en: {
+          greeting: "Good morning! I'm Bheema, your AI farming assistant. How can I help you with your farming needs today?",
+          joke: "Why did the scarecrow win an award? Because he was outstanding in his field! 🌾",
+          weather: "I can help you check the current weather conditions for your location. Would you like me to get the weather information?",
+          market: "I can provide you with current market prices for various crops and commodities. What would you like to know about market trends?",
+          crop: "I can help you with crop recommendations, disease detection, and farming advice. What specific crop are you working with?",
+          disease: "I can help identify crop diseases from photos and provide treatment recommendations. Would you like to upload an image of your crop?",
+          scheme: "I can provide information about various government schemes and subsidies available for farmers. Which scheme are you interested in?"
+        },
+        hi: {
+          greeting: "सुप्रभात! मैं भीमा हूं, आपका AI कृषि सहायक। आज मैं आपकी कृषि संबंधी जरूरतों में कैसे मदद कर सकता हूं?",
+          joke: "स्केयरक्रो को पुरस्कार क्यों मिला? क्योंकि वह अपने क्षेत्र में उत्कृष्ट था! 🌾",
+          weather: "मैं आपके स्थान के मौजूदा मौसम की स्थिति की जांच करने में आपकी मदद कर सकता हूं। क्या आप चाहते हैं कि मैं मौसम की जानकारी प्राप्त करूं?",
+          market: "मैं आपको विभिन्न फसलों और वस्तुओं के वर्तमान बाजार मूल्य प्रदान कर सकता हूं। बाजार के रुझानों के बारे में आप क्या जानना चाहते हैं?",
+          crop: "मैं फसल की सिफारिश, बीमारी का पता लगाने और कृषि सलाह में आपकी मदद कर सकता हूं। आप किस विशिष्ट फसल के साथ काम कर रहे हैं?",
+          disease: "मैं फोटो से फसल की बीमारियों की पहचान कर सकता हूं और उपचार की सिफारिश दे सकता हूं। क्या आप अपनी फसल की एक छवि अपलोड करना चाहते हैं?",
+          scheme: "मैं किसानों के लिए उपलब्ध विभिन्न सरकारी योजनाओं और सब्सिडी के बारे में जानकारी प्रदान कर सकता हूं। आप किस योजना में रुचि रखते हैं?"
+        },
+        te: {
+          greeting: "శుభోదయం! నేను బీమా, మీ AI వ్యవసాయ సహాయకుడు. నేటి మీ వ్యవసాయ అవసరాలలో నేను ఎలా సహాయం చేయగలను?",
+          joke: "స్కేర్క్రోకు అవార్డ్ ఎందుకు వచ్చింది? ఎందుకంటే అతను తన ఫీల్డ్‌లో అత్యుత్తమంగా ఉన్నాడు! 🌾",
+          weather: "మీ స్థానం వాతావరణ పరిస్థితులను తనిఖీ చేయడంలో నేను మీకు సహాయం చేయగలను. వాతావరణ సమాచారాన్ని పొందాలని మీరు కోరుకుంటున్నారా?",
+          market: "వివిధ పంటలు మరియు వస్తువులకు ప్రస్తుత మార్కెట్ ధరలను నేను మీకు అందించగలను. మార్కెట్ ట్రెండ్‌ల గురించి మీరు ఏమి తెలుసుకోవాలనుకుంటున్నారు?",
+          crop: "పంట సిఫార్సులు, వ్యాధి గుర్తింపు మరియు వ్యవసాయ సలహాలో నేను మీకు సహాయం చేయగలను. మీరు ఏ ప్రత్యేక పంటతో పని చేస్తున్నారు?",
+          disease: "ఫోటోల నుండి పంట వ్యాధులను గుర్తించి చికిత్స సిఫార్సులను అందించగలను. మీ పంట చిత్రాన్ని అప్‌లోడ్ చేయాలని మీరు కోరుకుంటున్నారా?",
+          scheme: "రైతులకు అందుబాటులో ఉన్న వివిధ ప్రభుత్వ పథకాలు మరియు సబ్సిడీల గురించి సమాచారాన్ని అందించగలను. ఏ పథకంలో మీకు ఆసక్తి ఉంది?"
+        },
+        ta: {
+          greeting: "காலை வணக்கம்! நான் பீமா, உங்கள் AI விவசாய உதவியாளர். இன்று உங்கள் விவசாயத் தேவைகளில் நான் எவ்வாறு உதவ முடியும்?",
+          joke: "ஸ்கேர்க்ரோவுக்கு விருது ஏன் கிடைத்தது? ஏனென்றால் அவர் தனது வயலில் மிகவும் சிறப்பாக இருந்தார்! 🌾",
+          weather: "உங்கள் இடத்தின் தற்போதைய வானிலை நிலைமைகளை சரிபார்க்க உதவ முடியும். வானிலை தகவலைப் பெற வேண்டுமா?",
+          market: "பல்வேறு பயிர்கள் மற்றும் பொருட்களின் தற்போதைய சந்தை விலைகளை வழங்க முடியும். சந்தை போக்குகளைப் பற்றி என்ன தெரிந்து கொள்ள விரும்புகிறீர்கள்?",
+          crop: "பயிர் பரிந்துரைகள், நோய் கண்டறிதல் மற்றும் விவசாய ஆலோசனையில் உதவ முடியும். எந்த குறிப்பிட்ட பயிருடன் வேலை செய்கிறீர்கள்?",
+          disease: "புகைப்படங்களிலிருந்து பயிர் நோய்களை அடையாளம் கண்டு சிகிச்சை பரிந்துரைகளை வழங்க முடியும். உங்கள் பயிரின் படத்தை பதிவேற்ற விரும்புகிறீர்களா?",
+          scheme: "விவசாயிகளுக்கு கிடைக்கும் பல்வேறு அரசு திட்டங்கள் மற்றும் மானியங்களைப் பற்றிய தகவலை வழங்க முடியும். எந்த திட்டத்தில் ஆர்வம் உள்ளது?"
+        },
+        kn: {
+          greeting: "ಶುಭೋದಯ! ನಾನು ಬೀಮಾ, ನಿಮ್ಮ AI ಕೃಷಿ ಸಹಾಯಕ. ಇಂದು ನಿಮ್ಮ ಕೃಷಿ ಅಗತ್ಯಗಳಲ್ಲಿ ನಾನು ಹೇಗೆ ಸಹಾಯ ಮಾಡಬಹುದು?",
+          joke: "ಸ್ಕೇರ್ಕ್ರೋಗೆ ಪ್ರಶಸ್ತಿ ಏಕೆ ಸಿಕ್ಕಿತು? ಏಕೆಂದರೆ ಅವನು ತನ್ನ ಕ್ಷೇತ್ರದಲ್ಲಿ ಅತ್ಯುತ್ತಮನಾಗಿದ್ದನು! 🌾",
+          weather: "ನಿಮ್ಮ ಸ್ಥಳದ ಪ್ರಸ್ತುತ ಹವಾಮಾನ ಸ್ಥಿತಿಗಳನ್ನು ಪರಿಶೀಲಿಸಲು ನಾನು ನಿಮಗೆ ಸಹಾಯ ಮಾಡಬಹುದು. ಹವಾಮಾನ ಮಾಹಿತಿಯನ್ನು ಪಡೆಯಲು ನೀವು ಬಯಸುತ್ತೀರಾ?",
+          market: "ವಿವಿಧ ಬೆಳೆಗಳು ಮತ್ತು ಸರಕುಗಳ ಪ್ರಸ್ತುತ ಮಾರುಕಟ್ಟೆ ಬೆಲೆಗಳನ್ನು ನಾನು ನಿಮಗೆ ಒದಗಿಸಬಹುದು. ಮారುಕಟ್ಟೆ ಪ್ರವೃತ್ತಿಗಳ ಬಗ್ಗೆ ನೀವು ಏನು ತಿಳಿದುಕೊಳ್ಳಲು ಬಯಸುತ್ತೀರಿ?",
+          crop: "ಬೆಳೆ ಶಿಫಾರಸುಗಳು, ರೋಗ ಪತ್ತೆ ಮತ್ತು ಕೃಷಿ ಸಲಹೆಯಲ್ಲಿ ನಾನು ನಿಮಗೆ ಸಹಾಯ ಮಾಡಬಹುದು. ನೀವು ಯಾವ ನಿರ್ದಿಷ್ಟ ಬೆಳೆಯೊಂದಿಗೆ ಕೆಲಸ ಮಾಡುತ್ತಿದ್ದೀರಿ?",
+          disease: "ಫೋಟೋಗಳಿಂದ ಬೆಳೆ ರೋಗಗಳನ್ನು ಗುರುತಿಸಿ ಮತ್ತು ಚಿಕಿತ್ಸಾ ಶಿಫಾರಸುಗಳನ್ನು ಒದಗಿಸಬಹುದು. ನಿಮ್ಮ ಬೆಳೆಯ ಚಿತ్రವನ್ನು ಅಪ್‌ಲೋಡ್ ಮಾಡಲು ನೀವು ಬಯಸುತ್ತೀರಾ?",
+          scheme: "ರೈತರಿಗೆ ಲಭ್ಯವಿರುವ ವಿವಿಧ ಸರ್ಕಾರಿ ಯೋಜನೆಗಳು ಮತ್ತು ಸಬ್ಸిడಿಗಳ ಬಗ್ಗೆ ಮಾಹಿತಿಯನ್ನು ಒದಗಿಸಬಹುದು. ಯಾವ ಯೋಜನೆಯಲ್ಲಿ ನೀವು ಆಸಕ್ತಿ ಹೊಂದಿದ್ದೀರಿ?"
+        },
+        mr: {
+          greeting: "शुभोदय! मी भीमा आहे, तुमचा AI शेती सहायक. आज मी तुमच्या शेतीच्या गरजांमध्ये कशी मदत करू शकतो?",
+          joke: "स्केयरक्रोला पुरस्कार का मिळाला? कारण तो त्याच्या क्षेत्रात उत्कृष्ट होता! 🌾",
+          weather: "तुमच्या स्थानाच्या सध्याच्या हवामान परिस्थिती तपासण्यात मी तुम्हाला मदत करू शकतो. तुम्हाला हवामान माहिती मिळवायची आहे का?",
+          market: "विविध पिके आणि वस्तूंच्या सध्याच्या बाजारभावांची माहिती मी तुम्हाला देऊ शकतो. बाजार ट्रेंड्सबद्दल तुम्हाला काय माहिती हवी आहे?",
+          crop: "पिक शिफारसी, रोग शोध आणि शेती सल्ल्यात मी तुम्हाला मदत करू शकतो. तुम्ही कोणत्या विशिष्ट पिकाबरोबर काम करत आहात?",
+          disease: "फोटोंमधून पिक रोग ओळखून उपचार शिफारसी देऊ शकतो. तुमच्या पिकाचे प्रतिमा अपलोड करायचे आहे का?",
+          scheme: "शेतकऱ्यांसाठी उपलब्ध असलेल्या विविध सरकारी योजना आणि सबसिडीबद्दल माहिती देऊ शकतो. तुम्हाला कोणत्या योजनेबद्दल माहिती हवी आहे?"
+        }
+      };
+
+      const langResponses = responses[detectedLanguage as keyof typeof responses] || responses.en;
+      let greetingResponse = langResponses.greeting;
+
+      if (lowerMessage === 'tell me a joke' || isJokeRequest) {
+        greetingResponse = langResponses.joke;
+      } else if (isBasicQuery) {
+        // Determine which type of query it is and respond accordingly
+        if (lowerMessage.includes('weather')) {
+          greetingResponse = langResponses.weather;
+        } else if (lowerMessage.includes('market') || lowerMessage.includes('price')) {
+          greetingResponse = langResponses.market;
+        } else if (lowerMessage.includes('crop')) {
+          greetingResponse = langResponses.crop;
+        } else if (lowerMessage.includes('disease')) {
+          greetingResponse = langResponses.disease;
+        } else if (lowerMessage.includes('scheme') || lowerMessage.includes('government') || lowerMessage.includes('loan') || lowerMessage.includes('subsidy')) {
+          greetingResponse = langResponses.scheme;
+        } else {
+          greetingResponse = langResponses.greeting;
+        }
+      }
+
+      const botMessage: AIMessage = {
+        id: `${new Date().toISOString()}-bot`,
+        content: greetingResponse,
+        sender: 'bot',
+        timestamp: new Date(),
+      };
+      setConversation(prev => [...prev, botMessage]);
+      // Always speak the response for voice assistant interactions
+      speakText(greetingResponse, detectedLanguage);
+      setIsThinking(false);
+      setStatus('idle');
+      return;
+    }
+
+    // Skip session check if workflow is active or paused - workflows handle their own logic
+    if (!sessionId && !dynamicWorkflowEngine.isActive() && !dynamicWorkflowEngine.isPaused()) {
+      // Wait for session to be initialized
+      let attempts = 0;
+      const maxAttempts = 10;
+      const checkSession = () => {
+        if (sessionId) {
+          // Session is now available, proceed with processing
+          processUserMessage(message, file, isVoiceInput);
+        } else if (attempts < maxAttempts) {
+          attempts++;
+          setTimeout(checkSession, 500); // Check again in 500ms
+        } else {
+          // Give up after max attempts
+          let errorMessage = "I'm still initializing. Please try again in a moment.";
+          const botMessage: AIMessage = {
+            id: `${new Date().toISOString()}-bot`,
+            content: errorMessage,
+            sender: 'bot',
+            timestamp: new Date(),
+          };
+          setConversation(prev => [...prev, botMessage]);
+          if (isVoiceInput) {
+            speakText(errorMessage, detectedLanguage);
+          }
+          setIsThinking(false);
+          setStatus('idle');
+        }
+      };
+      checkSession();
+      return;
+    }
+
+    setIsThinking(true);
+    setStatus('thinking');
+
+    try {
+      if (dynamicWorkflowEngine.isPaused()) {
+        const workflowResponse = dynamicWorkflowEngine.resumeWorkflow(message);
+        if (workflowResponse) {
+            setConversation(prev => [...prev, workflowResponse]);
+            // Don't speak here - the workflow engine handles speaking for paused workflows
+        }
+      } else {
+        const { intent, entities } = await aiAssistantService.recognizeIntent(message);
+
+        switch (intent) {
+            case 'run_workflow':
+                const workflowName = entities.workflowName;
+                if (workflowName) {
+                    // aiAssistantService.executeSavedWorkflow(workflowName); // Not implemented
+                    console.log(`Placeholder for running saved workflow: ${workflowName}`);
+                }
+                break;
+            case 'dynamic_workflow':
+                setIsWorkflowActive(true);
+                await aiAssistantService.generateAndExecuteWorkflow(message, detectedLanguage, file);
+                // The workflow engine handles adding messages to conversation via eventBus
+                break;
+            case 'general_query': {
+                const response = await aiAssistantService.executeTask(sessionId!, 'general_query', message, detectedLanguage, file);
+                let responseMessage = response.actions[0]?.message || "Sorry, I didn't understand.";
+                // Always translate response to detected language for multilingual support
+                if (detectedLanguage !== 'en') {
+                    try {
+                        responseMessage = await translateText(responseMessage, detectedLanguage, 'en');
+                    } catch (error) {
+                        console.warn('Translation failed, using original response:', error);
+                    }
+                }
+                const botMessage: AIMessage = {
+                    id: `${new Date().toISOString()}-bot`,
+                    content: responseMessage,
+                    sender: 'bot',
+                    timestamp: new Date(),
+                };
+                setConversation(prev => [...prev, botMessage]);
+                // Always speak the response for voice assistant interactions
+                speakText(responseMessage, detectedLanguage);
+                break;
+            }
+            default:
+                console.error(`Unknown intent: ${intent}`);
+                let errorMessageText = "Sorry, I'm not sure how to handle that request.";
+                // Always translate error message to detected language for multilingual support
+                if (detectedLanguage !== 'en') {
+                    try {
+                        errorMessageText = await translateText(errorMessageText, detectedLanguage, 'en');
+                    } catch (error) {
+                        console.warn('Translation failed, using original error message:', error);
+                    }
+                }
+                const errorMessage: AIMessage = {
+                    id: `${new Date().toISOString()}-bot`,
+                    content: errorMessageText,
+                    sender: 'bot',
+                    timestamp: new Date(),
+                };
+                setConversation(prev => [...prev, errorMessage]);
+                // Always speak the response for voice assistant interactions
+                speakText(errorMessageText, detectedLanguage);
+                break;
+        }
+      }
+    } catch (error) {
+        console.error('Error processing message:', error);
+        setStatus('error');
+        let errorMessageText = "Sorry, I encountered an error. Please try again.";
+        // Always translate error message to detected language for multilingual support
+        if (detectedLanguage !== 'en') {
+            try {
+                errorMessageText = await translateText(errorMessageText, detectedLanguage, 'en');
+            } catch (error) {
+                console.warn('Translation failed, using original error message:', error);
+            }
+        }
+        const botMessage: AIMessage = {
+            id: `${new Date().toISOString()}-bot`,
+            content: errorMessageText,
+            sender: 'bot',
+            timestamp: new Date(),
+        };
+        setConversation(prev => [...prev, botMessage]);
+        // Always speak the response for voice assistant interactions
+        const textToSpeak = errorMessageText
+            .replace(/\*\*(.*?)\*\*/g, '$1')
+            .replace(/### (.*)/g, '$1')
+            .replace(/#### (.*)/g, '$1')
+            .replace(/\* (.*)/g, '$1')
+            .replace(/---/g, '')
+            .replace(/#(\w+)/g, '$1');
+        speakText(textToSpeak, detectedLanguage);
+    } finally {
+        // Don't reset thinking status here for voice inputs - let the UI show thinking until response is complete
+        if (!isVoiceInput) {
+            setIsThinking(false);
+            setStatus('idle');
+        }
+    }
+  };
+
+  const handleSendMessage = async (message: string, file?: File) => {
+    if (!sessionId) return;
+
+    const userMessage: AIMessage = {
+      id: new Date().toISOString(),
+      content: message,
+      sender: 'user',
+      timestamp: new Date(),
+    };
+    setConversation(prev => [...prev, userMessage]);
+    // Always show thinking status for voice assistant interactions
+    setIsThinking(true);
+    setStatus('thinking');
+    processUserMessage(message, file, true); // Always treat as voice input for speaking
   };
 
   return (
     <>
-      {/* Main Voice Button */}
-      <motion.div
-        className="fixed bottom-6 right-6 z-50"
-        whileHover={{ scale: 1.1 }}
-        whileTap={{ scale: 0.9 }}
-      >
-        <Button
-          onClick={handleVoiceToggle}
-          className={`voice-button ${isListening ? 'listening' : ''} h-16 w-16 relative overflow-hidden`}
-          disabled={isSpeaking}
-        >
-          {/* Ripple effect when listening */}
-          {isListening && (
-            <motion.div
-              className="absolute inset-0 border-2 border-accent rounded-full"
-              animate={{ scale: [1, 2, 3], opacity: [1, 0.5, 0] }}
-              transition={{ duration: 1.5, repeat: Infinity }}
-            />
-          )}
-          
-          {isListening ? (
-            <motion.div
-              animate={{ scale: [1, 1.2, 1] }}
-              transition={{ duration: 0.5, repeat: Infinity }}
-            >
-              <Mic className="h-8 w-8" />
-            </motion.div>
-          ) : isSpeaking ? (
-            <motion.div
-              animate={{ rotate: [0, 360] }}
-              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-            >
-              <Volume2 className="h-8 w-8" />
-            </motion.div>
-          ) : (
-            <MicOff className="h-8 w-8" />
-          )}
-        </Button>
-      </motion.div>
+      <AgentInterface
+        conversation={conversation}
+        isSpeaking={isSpeaking}
+        isListening={isListening}
+        listeningText={listeningText}
+        onClose={() => {
+          console.log('Closing agent, setting isAgentVisible to false');
+          setIsAgentVisible(false);
+          setIsWorkflowActive(false);
+          dynamicWorkflowEngine.resetWorkflow();
+        }}
+        onSendMessage={handleSendMessage}
+        isVisible={isAgentVisible || isWorkflowActive || dynamicWorkflowEngine.isActive()}
+        isThinking={isThinking}
+        onVoiceToggle={handleVoiceToggle}
+        onCancelSpeaking={handleCancelSpeaking}
+        status={status}
+      />
 
-      {/* Voice Status Panel */}
-      <AnimatePresence>
-        {(isListening || isSpeaking || lastCommand) && (
-          <motion.div
-            initial={{ opacity: 0, y: 100, x: 50 }}
-            animate={{ opacity: 1, y: 0, x: 0 }}
-            exit={{ opacity: 0, y: 100, x: 50 }}
-            className="fixed bottom-24 right-6 z-40"
+      {secureContextError && (
+        <div className="fixed bottom-24 right-6 z-50 p-4 bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700">
+          <p className="font-bold">Warning</p>
+          <p>{secureContextError}</p>
+        </div>
+      )}
+
+      <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3">
+        <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+          <Button
+            onClick={() => {
+              console.log('Toggling isAgentVisible');
+              setIsAgentVisible(prev => !prev);
+            }}
+            className="h-16 w-16 rounded-full bg-secondary text-secondary-foreground hover:bg-secondary/90"
           >
-            <Card className="w-80 shadow-card bg-card/95 backdrop-blur-md">
-              <CardContent className="p-4">
-                {isListening && (
-                  <div className="text-center">
-                    <motion.div
-                      className="w-16 h-16 mx-auto mb-3 bg-accent/20 rounded-full flex items-center justify-center"
-                      animate={{ scale: [1, 1.1, 1] }}
-                      transition={{ duration: 1, repeat: Infinity }}
-                    >
-                      <Mic className="h-8 w-8 text-accent" />
-                    </motion.div>
-                    <p className="text-sm font-medium text-primary">
-                      {translateSync('Listening...')}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {translateSync('Speak in Kannada, Hindi, or English')}
-                    </p>
-                    
-                    {/* Voice level animation */}
-                    <div className="flex justify-center space-x-1 mt-3">
-                      {[...Array(5)].map((_, i) => (
-                        <motion.div
-                          key={i}
-                          className="w-1 bg-accent rounded-full"
-                          animate={{
-                            height: [4, 20, 4],
-                          }}
-                          transition={{
-                            duration: 0.8,
-                            repeat: Infinity,
-                            delay: i * 0.1,
-                          }}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {isSpeaking && (
-                  <div className="text-center">
-                    <motion.div
-                      className="w-16 h-16 mx-auto mb-3 bg-primary/20 rounded-full flex items-center justify-center"
-                      animate={{ rotate: [0, 360] }}
-                      transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                    >
-                      <Volume2 className="h-8 w-8 text-primary" />
-                    </motion.div>
-                    <p className="text-sm font-medium text-primary">
-                      {translateSync('Speaking...')}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {translateSync('Playing response in your language')}
-                    </p>
-                  </div>
-                )}
-
-                {lastCommand && !isListening && !isSpeaking && (
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <p className="text-sm font-medium text-primary">
-                        {translateSync('Last Command')}
-                      </p>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => speakText(lastCommand)}
-                        className="p-1 h-6 w-6"
-                      >
-                        <Volume2 className="h-3 w-3" />
-                      </Button>
-                    </div>
-                    <p className="text-sm text-foreground bg-accent/10 p-2 rounded">
-                      "{lastCommand}"
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-2">
-                      {translateSync('Tap the mic to ask another question')}
-                    </p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Quick Voice Commands */}
-      <AnimatePresence>
-        {isExpanded && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.8 }}
-            className="fixed bottom-32 right-20 z-40"
-          >
-            <Card className="w-64 shadow-card bg-card/95 backdrop-blur-md">
-              <CardContent className="p-3">
-                <h4 className="text-sm font-medium mb-2">{translateSync('Quick Commands')}</h4>
-                <div className="space-y-1 text-xs">
-                  <div className="p-2 bg-accent/10 rounded text-muted-foreground">
-                    "{translateSync('Show crop status')}"
-                  </div>
-                  <div className="p-2 bg-accent/10 rounded text-muted-foreground">
-                    "{translateSync('Price information')}"
-                  </div>
-                  <div className="p-2 bg-accent/10 rounded text-muted-foreground">
-                    "{translateSync('Government schemes')}"
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            {isAgentVisible ? <X /> : <MessageSquare />}
+          </Button>
+        </motion.div>
+      </div>
     </>
   );
 };

@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
-import { useLanguage } from '@/contexts/LanguageContext';
+import { useLanguage } from '@/contexts/language-utils';
 import { useWeather } from '@/hooks/useWeather';
 import { usePlan } from '@/contexts/PlanContext';
 import { 

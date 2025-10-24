@@ -11,9 +11,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Layout } from '@/components/Layout';
-import { useLanguage, languages } from '@/contexts/LanguageContext';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { languages } from '@/contexts/language-utils';
 import { User, Mail, Phone, Globe, Package, LogOut, Edit, Save } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import eventBus from '@/lib/eventBus';
 
 const profileSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
@@ -68,6 +70,31 @@ const Profile = () => {
       language: user.language,
     });
   }, [navigate, form]);
+
+  useEffect(() => {
+    const handleFillField = ({ field, value }: { field: string, value: string }) => {
+        if (field === 'name') {
+            form.setValue('name', value);
+        } else if (field === 'email') {
+            form.setValue('email', value);
+        } else if (field === 'phone') {
+            form.setValue('phone', value);
+        } else if (field === 'state') {
+            form.setValue('state', value);
+        } else if (field === 'district') {
+            form.setValue('district', value);
+        } else if (field === 'language') {
+            form.setValue('language', value);
+        }
+        setIsEditing(true); // Automatically switch to edit mode when a field is filled by the agent
+    };
+
+    eventBus.on('fill-profile-field', handleFillField);
+
+    return () => {
+        eventBus.remove('fill-profile-field', handleFillField);
+    };
+  }, [form]);
 
   const onSubmit = (data: ProfileForm) => {
     if (!currentUser) return;

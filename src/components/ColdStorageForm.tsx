@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 
 import { Button } from './ui/button';
@@ -9,6 +9,9 @@ import { Textarea } from './ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Checkbox } from './ui/checkbox';
 import { useToast } from './ui/use-toast';
+import eventBus from '@/lib/eventBus';
+import { startSession, executeTask } from '@/services/apiService';
+import { useLanguage } from '@/contexts/language-utils';
 
 import { Snowflake, MapPin, Phone, Calendar, User } from 'lucide-react';
 
@@ -19,7 +22,8 @@ interface ColdStorageFormProps {
 
 export const ColdStorageForm: React.FC<ColdStorageFormProps> = ({ isOpen, onClose }) => {
   const { toast } = useToast();
-  
+  const { currentLanguage } = useLanguage();
+  const [sessionId, setSessionId] = useState<string | null>(null);
   
   const [formData, setFormData] = useState({
     farmerName: '',
@@ -34,13 +38,23 @@ export const ColdStorageForm: React.FC<ColdStorageFormProps> = ({ isOpen, onClos
     specialRequirements: '',
     agreedToTerms: false
   });
-  
 
-  
+  const handleInputChange = useCallback((field: string, value: string | boolean) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (!sessionId) {
+      toast({
+        title: "Error",
+        description: "Session not ready. Please try again.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     if (!formData.agreedToTerms) {
       toast({
         title: "Terms & Conditions",
@@ -50,33 +64,96 @@ export const ColdStorageForm: React.FC<ColdStorageFormProps> = ({ isOpen, onClos
       return;
     }
 
-    // Simulate form submission
-    toast({
-      title: "Registration Successful! ✅",
-      description: `Your cold storage request has been submitted. We'll contact you within 24 hours.`,
-      duration: 5000
-    });
+    try {
+      const userInput = `Book cold storage for ${formData.produceType}, quantity ${formData.estimatedQuantity} for ${formData.preferredDuration}. Farmer: ${formData.farmerName}, Location: ${formData.farmLocation}`;
+      
+      await executeTask(
+        sessionId,
+        'cold_storage_booking',
+        userInput,
+        currentLanguage.code,
+        null
+      );
 
-    // Reset form and close
-    setFormData({
-      farmerName: '',
-      farmLocation: '',
-      phoneNumber: '',
-      email: '',
-      farmSize: '',
-      produceType: '',
-      estimatedQuantity: '',
-      preferredDuration: '',
-      nearestFacility: '',
-      specialRequirements: '',
-      agreedToTerms: false
-    });
-    onClose();
-  };
+      toast({
+        title: "Registration Successful! ✅",
+        description: `Your cold storage request has been submitted. We'll contact you within 24 hours.`,
+        duration: 5000
+      });
 
-  const handleInputChange = (field: string, value: string | boolean) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-  };
+      // Reset form and close
+      setFormData({
+        farmerName: '',
+        farmLocation: '',
+        phoneNumber: '',
+        email: '',
+        farmSize: '',
+        produceType: '',
+        estimatedQuantity: '',
+        preferredDuration: '',
+        nearestFacility: '',
+        specialRequirements: '',
+        agreedToTerms: false
+      });
+      onClose();
+
+    } catch (error: any) {
+      toast({
+        title: "Submission Failed",
+        description: error.message || "An error occurred.",
+        variant: "destructive"
+      });
+    }
+  }, [sessionId, formData, toast, onClose, currentLanguage.code]);
+
+  useEffect(() => {
+    if (isOpen) {
+      const initSession = async () => {
+        try {
+          const sessionData = await startSession('user-cold-storage', currentLanguage.code);
+          setSessionId(sessionData.session_id);
+          eventBus.dispatch('cold-storage-form-ready');
+        } catch (error) {
+          toast({
+            title: "Error",
+            description: "Could not connect to the agent.",
+            variant: "destructive"
+          });
+        }
+      };
+      initSession();
+    }
+  }, [isOpen, currentLanguage.code, toast]);
+
+  const handleAutofill = useCallback(({ field, value }: { field: string, value: string | boolean }) => {
+    handleInputChange(field, value);
+  }, [handleInputChange]);
+
+  const handleSubmitForm = useCallback(() => {
+    const syntheticEvent = {
+      preventDefault: () => {},
+    } as React.FormEvent;
+    handleSubmit(syntheticEvent);
+  }, [handleSubmit]);
+
+  const handleClickElement = useCallback(({ target }: { target: string }) => {
+    if (target === 'register button') {
+      handleSubmitForm();
+    }
+  }, [handleSubmitForm]);
+
+  useEffect(() => {
+    eventBus.on('autofill-field', handleAutofill);
+    eventBus.on('submit-form', handleSubmitForm);
+    eventBus.on('click-element', handleClickElement);
+
+    return () => {
+      eventBus.remove('autofill-field', handleAutofill);
+      eventBus.remove('submit-form', handleSubmitForm);
+      eventBus.remove('click-element', handleClickElement);
+    };
+  }, [handleAutofill, handleSubmitForm, handleClickElement]);
+  
 
   if (!isOpen) return null;
 

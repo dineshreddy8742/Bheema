@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useLanguage } from '@/contexts/LanguageContext';
+import { useLanguage } from '@/contexts/language-utils';
 import { useToast } from '@/components/ui/use-toast';
 import { 
   Package,
@@ -482,6 +482,7 @@ const Artifacts = () => {
                       <ImageUpload 
                         onImagesChange={setArtifactImages}
                         maxImages={5}
+                        onRemoveExisting={() => {}}
                       />
                     </div>
 

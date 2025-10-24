@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Layout } from '@/components/Layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,7 +10,7 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useLanguage } from '@/contexts/LanguageContext';
+import { useLanguage } from '@/contexts/language-utils';
 import { 
   ShoppingCart,
   Plus,
@@ -39,6 +39,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { ProductDetailModal } from '@/components/ProductDetailModal';
 import { ImageUpload } from '@/components/ImageUpload';
 import { useSupabase, type EnhancedProduct, type ProductImage } from '@/hooks/useSupabase';
+import eventBus from '@/lib/eventBus';
 
 type MarketplaceMode = 'grocery' | 'artifacts';
 
@@ -589,6 +590,25 @@ const GroceryMarketplace = () => {
     setSelectedCategory('all');
     setSearchQuery('');
   };
+
+  useEffect(() => {
+    const handleFillField = ({ field, value }: { field: string, value: string }) => {
+        if (field === 'searchQuery') {
+            setSearchQuery(value);
+        } else if (field === 'category') {
+            const category = groceryCategories.find(c => c.name.toLowerCase() === value.toLowerCase());
+            if (category) {
+                setSelectedCategory(category.id);
+            }
+        }
+    };
+
+    eventBus.on('fill-grocery-marketplace-field', handleFillField);
+
+    return () => {
+        eventBus.remove('fill-grocery-marketplace-field', handleFillField);
+    };
+  }, [groceryCategories]);
 
   return (
     <Layout>
@@ -1255,6 +1275,7 @@ const GroceryMarketplace = () => {
                       <ImageUpload 
                         onImagesChange={setProductImages}
                         maxImages={5}
+                        onRemoveExisting={() => {}}
                       />
                     </div>
 
@@ -1416,6 +1437,7 @@ const GroceryMarketplace = () => {
                       <ImageUpload 
                         onImagesChange={setArtifactImages}
                         maxImages={5}
+                        onRemoveExisting={() => {}}
                       />
                     </div>
 

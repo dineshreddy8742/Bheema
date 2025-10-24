@@ -8,19 +8,21 @@ interface ImageUploadProps {
   onImagesChange: (images: File[]) => void;
   maxImages?: number;
   existingImages?: string[];
+  onRemoveExisting?: (index: number) => void;
 }
 
 export const ImageUpload: React.FC<ImageUploadProps> = ({ 
   onImagesChange, 
   maxImages = 5,
-  existingImages = []
+  existingImages = [],
+  onRemoveExisting
 }) => {
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
   const [imagePreviewUrls, setImagePreviewUrls] = useState<string[]>([]);
   const [dragActive, setDragActive] = useState(false);
   const { toast } = useToast();
 
-  const handleFiles = useCallback((files: FileList) => {
+  const handleUpload = useCallback((files: FileList) => {
     const newImages = Array.from(files).filter(file => {
       if (!file.type.startsWith('image/')) {
         toast({
@@ -75,13 +77,13 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
     setDragActive(false);
     
     if (e.dataTransfer.files) {
-      handleFiles(e.dataTransfer.files);
+      handleUpload(e.dataTransfer.files);
     }
-  }, [handleFiles]);
+  }, [handleUpload]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
-      handleFiles(e.target.files);
+      handleUpload(e.target.files);
     }
   };
 
@@ -157,6 +159,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
                   size="sm"
                   variant="destructive"
                   className="h-6 w-6 p-0 rounded-full"
+                  onClick={() => onRemoveExisting?.(index)}
                 >
                   <X className="h-3 w-3" />
                 </Button>

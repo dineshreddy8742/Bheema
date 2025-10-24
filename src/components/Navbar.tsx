@@ -4,7 +4,8 @@ import { Menu, Bell, HelpCircle, User, ChevronDown, Globe, Settings } from 'luci
 import { useNavigate } from 'react-router-dom';
 import { Button } from './ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
-import { useLanguage, languages } from '@/contexts/LanguageContext';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { languages } from '@/contexts/language-utils';
 import farmerAvatar from '@/assets/farmer-avatar.png';
 
 interface NavbarProps {
@@ -135,14 +136,42 @@ export const Navbar: React.FC<NavbarProps> = ({ onMenuToggle, isSidebarOpen }) =
 
         {/* Right section */}
         <div className="flex items-center space-x-2">
-          {/* Language Display */}
-          <div className="relative hidden md:block">
-            <div className="flex items-center gap-2">
+          {/* Language Switcher */}
+          <div className="relative hidden md:block" ref={languagesRef}>
+            <Button
+              variant="ghost"
+              onClick={() => setShowLanguages(!showLanguages)}
+              className="flex items-center gap-2"
+            >
               <Globe className="h-4 w-4" />
               <span className="text-xs">
                 {currentLanguage.nativeName}
               </span>
-            </div>
+              <ChevronDown className="h-4 w-4" />
+            </Button>
+
+            {showLanguages && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="absolute right-0 mt-2 w-48 bg-card rounded-lg shadow-card border p-2 z-50"
+              >
+                {languages.map((lang) => (
+                  <Button
+                    key={lang.code}
+                    variant="ghost"
+                    className="w-full justify-start gap-2"
+                    onClick={() => {
+                      setLanguage(lang);
+                      setShowLanguages(false);
+                    }}
+                  >
+                    <span>{lang.flag}</span>
+                    <span>{lang.nativeName}</span>
+                  </Button>
+                ))}
+              </motion.div>
+            )}
           </div>
 
           {/* Notifications */}

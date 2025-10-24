@@ -1,4 +1,6 @@
-import axios from 'axios';
+import { aiAssistantService } from './aiAssistantService';
+// @ts-ignore
+import schemesData from '@/lib/schemes.json';
 
 export interface Scheme {
   id: string;
@@ -32,215 +34,247 @@ export interface SchemeSearchParams {
   limit?: number;
 }
 
-// Government Schemes API Service
 class GovernmentSchemesService {
-  private baseURL = 'https://api.data.gov.in/resource';
-  private apiKey = 'YOUR_DATA_GOV_IN_API_KEY'; // Replace with actual API key
+  private schemes: Scheme[] = [];
 
-  // Fetch schemes from Government API
+  constructor() {
+    this.loadSchemesFromData();
+  }
+
+  private loadSchemesFromData() {
+    this.schemes = schemesData.map((item: any, index: number) => ({
+      id: `scheme_${index + 1}`,
+      name: item.scheme_name,
+      category: this.determineCategory(item.scheme_name, item.scheme_details),
+      subsidy: this.extractSubsidy(item.scheme_details),
+      maxAmount: this.extractMaxAmount(item.scheme_details),
+      status: 'active' as const,
+      deadline: 'Ongoing',
+      eligibility: this.extractEligibility(item.target_beneficiary, item.scheme_details),
+      documents: this.extractDocuments(item.scheme_details),
+      benefits: this.extractBenefits(item.scheme_details),
+      applicationProcess: this.extractApplicationProcess(item.scheme_details),
+      description: item.scheme_details,
+      targetState: item.geography
+    }));
+  }
+
+  private determineCategory(name: string, details: string): string {
+    const lowerName = name.toLowerCase();
+    const lowerDetails = details.toLowerCase();
+
+    if (lowerName.includes('kisan') || lowerName.includes('farmer')) return 'Farmer Support';
+    if (lowerName.includes('insurance') || lowerName.includes('bima')) return 'Insurance';
+    if (lowerName.includes('credit') || lowerName.includes('loan')) return 'Credit';
+    if (lowerName.includes('irrigation') || lowerName.includes('water')) return 'Irrigation';
+    if (lowerName.includes('seed') || lowerName.includes('planting')) return 'Seeds';
+    if (lowerName.includes('soil') || lowerName.includes('health')) return 'Soil Health';
+    if (lowerName.includes('organic') || lowerName.includes('paramparagat')) return 'Organic Farming';
+    if (lowerName.includes('market') || lowerName.includes('nam')) return 'Market Access';
+    if (lowerName.includes('pest') || lowerName.includes('disease')) return 'Pest Management';
+    if (lowerName.includes('horticulture') || lowerName.includes('falbaug')) return 'Horticulture';
+
+    return 'General Agriculture';
+  }
+
+  private extractSubsidy(details: string): string {
+    if (details.toLowerCase().includes('100 per cent subsidy')) return '100%';
+    if (details.toLowerCase().includes('subsidy')) return 'Up to 100%';
+    return 'Varies';
+  }
+
+  private extractMaxAmount(details: string): string {
+    // Extract amounts from details if available
+    const amountMatch = details.match(/₹\s*[\d,]+(?:\s*lakh)?/i);
+    return amountMatch ? amountMatch[0] : 'Varies';
+  }
+
+  private extractEligibility(beneficiary: string, details: string): string[] {
+    const eligibility = [];
+
+    if (beneficiary) {
+      eligibility.push(`Target Beneficiary: ${beneficiary}`);
+    }
+
+    // Extract additional eligibility criteria from details
+    if (details.toLowerCase().includes('small & marginal farmers')) {
+      eligibility.push('Small and marginal farmers');
+    }
+    if (details.toLowerCase().includes('landholding')) {
+      const landMatch = details.match(/landholding?\s*(?:up to|of)?\s*[\d.]+\s*ha?/i);
+      if (landMatch) eligibility.push(landMatch[0]);
+    }
+    if (details.toLowerCase().includes('income upto')) {
+      const incomeMatch = details.match(/income\s*(?:upto|up to)\s*₹?\s*[\d.]+\s*lakh?/i);
+      if (incomeMatch) eligibility.push(incomeMatch[0]);
+    }
+
+    return eligibility.length > 0 ? eligibility : ['Farmers and agricultural stakeholders'];
+  }
+
+  private extractDocuments(details: string): string[] {
+    // Common documents for agricultural schemes
+    return [
+      'Land documents/ownership proof',
+      'Identity proof (Aadhaar/PAN)',
+      'Bank account details',
+      'Income certificate (if applicable)',
+      'Caste certificate (if applicable)'
+    ];
+  }
+
+  private extractBenefits(details: string): string[] {
+    const benefits = [];
+
+    if (details.toLowerCase().includes('financial assistance')) {
+      benefits.push('Financial assistance for agricultural activities');
+    }
+    if (details.toLowerCase().includes('subsidy')) {
+      benefits.push('Subsidy on agricultural inputs/equipment');
+    }
+    if (details.toLowerCase().includes('insurance')) {
+      benefits.push('Crop insurance coverage');
+    }
+    if (details.toLowerCase().includes('credit')) {
+      benefits.push('Easy credit access');
+    }
+    if (details.toLowerCase().includes('training')) {
+      benefits.push('Capacity building and training');
+    }
+    if (details.toLowerCase().includes('pension')) {
+      benefits.push('Pension benefits');
+    }
+
+    return benefits.length > 0 ? benefits : ['Agricultural support and development'];
+  }
+
+  private extractApplicationProcess(details: string): string[] {
+    return [
+      'Visit nearest agriculture office or online portal',
+      'Submit required documents',
+      'Fill application form',
+      'Verification and approval',
+      'Receive benefits/subsidy'
+    ];
+  }
+
   async fetchSchemes(params: SchemeSearchParams = {}): Promise<Scheme[]> {
     try {
-      // Using mock data for now - replace with actual API call
-      const mockSchemes: Scheme[] = [
-        {
-          id: 'drip-irrigation',
-          name: 'Drip Irrigation Subsidy',
-          category: 'Water Management',
-          subsidy: '90%',
-          maxAmount: '₹1,50,000',
-          status: 'active',
-          deadline: '2024-03-31',
-          eligibility: [
-            'Small and marginal farmers',
-            'Minimum 0.5 acre land',
-            'Valid land documents',
-            'Bank account linked to Aadhaar'
-          ],
-          documents: [
-            'Land ownership certificate',
-            'Aadhaar card',
-            'Bank passbook',
-            'Passport size photographs'
-          ],
-          benefits: [
-            'Up to 90% subsidy on drip irrigation systems',
-            'Water conservation technology',
-            'Increased crop yield',
-            'Reduced labor costs'
-          ],
-          applicationProcess: [
-            'Visit nearest agriculture office',
-            'Submit required documents',
-            'Get technical evaluation done',
-            'Receive approval and subsidy'
-          ]
-        },
-        {
-          id: 'solar-pump',
-          name: 'Solar Water Pump Scheme',
-          category: 'Renewable Energy',
-          subsidy: '75%',
-          maxAmount: '₹2,00,000',
-          status: 'active',
-          deadline: '2024-04-15',
-          eligibility: [
-            'Farmers with irrigation needs',
-            'Grid connection not available',
-            'Minimum 1 acre farmland',
-            'No existing subsidy availed'
-          ],
-          documents: [
-            'Land records',
-            'Income certificate',
-            'Aadhaar card',
-            'Bank account details'
-          ],
-          benefits: [
-            '75% subsidy on solar pump installation',
-            'Free electricity for 25 years',
-            'Environmentally friendly',
-            'Low maintenance costs'
-          ],
-          applicationProcess: [
-            'Apply online at government portal',
-            'Upload necessary documents',
-            'Site inspection by officials',
-            'Installation after approval'
-          ]
-        },
-        {
-          id: 'crop-insurance',
-          name: 'Pradhan Mantri Fasal Bima Yojana',
-          category: 'Insurance',
-          subsidy: '98%',
-          maxAmount: 'Based on crop value',
-          status: 'active',
-          deadline: 'Before sowing season',
-          eligibility: [
-            'All farmers including sharecroppers',
-            'Enrolled in land records',
-            'Growing notified crops',
-            'Premium payment before deadline'
-          ],
-          documents: [
-            'Land documents or agreement',
-            'Aadhaar card',
-            'Bank account details',
-            'Sowing certificate'
-          ],
-          benefits: [
-            'Protection against crop loss',
-            '98% premium subsidy',
-            'Quick claim settlement',
-            'Coverage for natural calamities'
-          ],
-          applicationProcess: [
-            'Enroll through bank or CSC',
-            'Pay minimal premium',
-            'Report loss within 72 hours',
-            'Receive compensation'
-          ]
-        }
-      ];
+      let filteredSchemes = [...this.schemes];
 
-      // Filter schemes based on search parameters
-      let filteredSchemes = mockSchemes;
-      
+      // Filter by query
       if (params.query) {
         const query = params.query.toLowerCase();
         filteredSchemes = filteredSchemes.filter(scheme =>
           scheme.name.toLowerCase().includes(query) ||
-          scheme.category.toLowerCase().includes(query) ||
-          scheme.benefits.some(benefit => benefit.toLowerCase().includes(query))
+          scheme.description?.toLowerCase().includes(query) ||
+          scheme.category.toLowerCase().includes(query)
         );
       }
 
+      // Filter by category
       if (params.category) {
         filteredSchemes = filteredSchemes.filter(scheme =>
-          scheme.category.toLowerCase() === params.category?.toLowerCase()
+          scheme.category.toLowerCase().includes(params.category!.toLowerCase())
         );
       }
 
-      return filteredSchemes.slice(0, params.limit || 10);
+      // Filter by state
+      if (params.state) {
+        filteredSchemes = filteredSchemes.filter(scheme =>
+          scheme.targetState?.toLowerCase().includes(params.state!.toLowerCase())
+        );
+      }
+
+      // Apply limit
+      if (params.limit) {
+        filteredSchemes = filteredSchemes.slice(0, params.limit);
+      }
+
+      return filteredSchemes;
     } catch (error) {
       console.error('Error fetching schemes:', error);
       throw new Error('Failed to fetch government schemes');
     }
   }
 
-  // Fetch help centers
   async fetchHelpCenters(location?: string): Promise<HelpCenter[]> {
-    try {
-      // Mock data - replace with actual API call
-      const mockHelpCenters: HelpCenter[] = [
-        {
-          name: 'Bangalore Agriculture Office',
-          address: 'Vidhana Soudha, Bangalore',
-          phone: '+91-80-2234-5678',
-          distance: '12 km',
-          email: 'agri.bangalore@gov.in',
-          services: ['Scheme applications', 'Technical support', 'Documentation']
-        },
-        {
-          name: 'Krishi Vigyan Kendra',
-          address: 'UAS Campus, Hebbal',
-          phone: '+91-80-2345-6789',
-          distance: '8 km',
-          email: 'kvk.hebbal@uasbangalore.edu.in',
-          services: ['Training programs', 'Technical guidance', 'Soil testing']
-        },
-        {
-          name: 'District Collector Office',
-          address: 'Mini Vidhana Soudha',
-          phone: '+91-80-3456-7890',
-          distance: '15 km',
-          email: 'dc.bangalore@gov.in',
-          services: ['Revenue matters', 'Land records', 'Subsidy approvals']
-        }
-      ];
+    // Mock help centers data - in a real implementation, this would come from a database or API
+    const helpCenters: HelpCenter[] = [
+      {
+        name: "District Agriculture Office",
+        address: "Agriculture Complex, Main Road, District HQ",
+        phone: "+91-12345-67890",
+        distance: "2.5 km",
+        email: "dao@district.gov.in",
+        services: ["Scheme Applications", "Crop Advisory", "Subsidy Claims"]
+      },
+      {
+        name: "Krishi Vigyan Kendra",
+        address: "Agricultural University Campus, Research Center",
+        phone: "+91-12345-67891",
+        distance: "5.2 km",
+        email: "kvk@agriuni.edu.in",
+        services: ["Technical Training", "Seed Distribution", "Equipment Demo"]
+      },
+      {
+        name: "Common Service Center",
+        address: "Village Panchayat Building, Block Office",
+        phone: "+91-12345-67892",
+        distance: "1.8 km",
+        email: "csc@village.gov.in",
+        services: ["Online Applications", "Document Processing", "Digital Services"]
+      }
+    ];
 
-      return mockHelpCenters;
-    } catch (error) {
-      console.error('Error fetching help centers:', error);
-      throw new Error('Failed to fetch help centers');
-    }
+    return helpCenters;
   }
 
-  // Search schemes with voice query
   async searchSchemesWithVoice(voiceQuery: string): Promise<Scheme[]> {
     try {
-      // Process voice query and extract relevant keywords
-      const keywords = this.extractKeywords(voiceQuery);
-      return await this.fetchSchemes({ query: keywords.join(' ') });
+      const response = await aiAssistantService.executeTask(
+        'default-session', // Session ID needs to be managed properly
+        'gov_scheme_application',
+        voiceQuery
+      );
+
+      const schemes: Scheme[] = response.actions.map((action: any) => ({
+        id: action.summary || 'unknown',
+        name: action.summary || 'Unknown Scheme',
+        category: 'Unknown',
+        subsidy: 'N/A',
+        maxAmount: 'N/A',
+        status: 'active',
+        deadline: 'N/A',
+        eligibility: [],
+        documents: [],
+        benefits: [action.summary],
+        applicationProcess: [],
+      }));
+
+      return schemes;
     } catch (error) {
       console.error('Error processing voice query:', error);
       throw new Error('Failed to process voice query');
     }
   }
 
-  // Apply for a scheme
   async applyForScheme(schemeId: string, applicationData: any): Promise<{ success: boolean; applicationId?: string }> {
     try {
-      // Mock API call - replace with actual implementation
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
+      const response = await aiAssistantService.executeTask(
+        'default-session', // Session ID needs to be managed properly
+        'gov_scheme_application',
+        `apply for ${schemeId}`
+      );
+
       return {
         success: true,
-        applicationId: `APP${Date.now()}`
+        applicationId: response.session_id,
       };
     } catch (error) {
       console.error('Error applying for scheme:', error);
       throw new Error('Failed to submit application');
     }
-  }
-
-  private extractKeywords(text: string): string[] {
-    const keywords = text.toLowerCase().match(/\b\w+\b/g) || [];
-    const relevantKeywords = keywords.filter(word => 
-      word.length > 3 && 
-      !['about', 'tell', 'what', 'how', 'when', 'where', 'can', 'will', 'should'].includes(word)
-    );
-    return relevantKeywords;
   }
 }
 

@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Textarea } from '@/components/ui/textarea';
 import { ThumbsUp, MessageSquare, Send, Image as ImageIcon } from 'lucide-react';
+import eventBus from '@/lib/eventBus';
 
 const categories = [
   'Crop Diseases',
@@ -59,6 +60,23 @@ const Community = () => {
   const [selectedCategory, setSelectedCategory] = useState('Crop Diseases');
   const [posts, setPosts] = useState(initialPosts);
   const [newPostContent, setNewPostContent] = useState('');
+
+  useEffect(() => {
+    const handleFillField = ({ field, value }: { field: string, value: string }) => {
+        if (field === 'category') {
+            const category = categories.find(c => c.toLowerCase() === value.toLowerCase());
+            if (category) {
+                setSelectedCategory(category);
+            }
+        }
+    };
+
+    eventBus.on('fill-community-field', handleFillField);
+
+    return () => {
+        eventBus.remove('fill-community-field', handleFillField);
+    };
+  }, []);
 
   const handlePostSubmit = () => {
     if (newPostContent.trim() === '') return;

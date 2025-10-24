@@ -1,11 +1,11 @@
-import React from 'react';
-import { Layout } from '@/components/Layout';
-import { Dashboard } from '@/components/Dashboard';
+import { Layout } from "@/components/Layout";
 
 const Index = () => {
   return (
     <Layout>
-      <Dashboard />
+      <div>
+        <h1 className="text-2xl font-bold">Hello World</h1>
+      </div>
     </Layout>
   );
 };

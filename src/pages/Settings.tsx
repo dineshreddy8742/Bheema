@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { useLanguage, languages } from "@/contexts/LanguageContext";
+import { useLanguage, languages } from "@/contexts/language-utils";
 import { useToast } from "@/components/ui/use-toast";
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
@@ -14,6 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Layout } from "@/components/Layout";
 import { toast, Toaster } from 'sonner';
+import eventBus from '@/lib/eventBus';
 import {
   Globe,
   Bell,
@@ -77,6 +78,45 @@ const Settings = () => {
         }
       }));
     }
+  }, []);
+
+  useEffect(() => {
+    const handleFillField = ({ field, value }: { field: string, value: any }) => {
+        setSettings(prev => {
+            if (field === 'appLanguage') {
+                // This is handled by Profile.tsx, but if we want to handle it here, we would need to update the currentLanguage context
+                return prev;
+            } else if (field === 'voiceLanguage') {
+                return { ...prev, voice: { ...prev.voice, language: value } };
+            } else if (field === 'voiceEnabled') {
+                return { ...prev, voice: { ...prev.voice, enabled: value } };
+            } else if (field === 'speechSpeed') {
+                return { ...prev, voice: { ...prev.voice, speed: value } };
+            } else if (field === 'cropAlerts') {
+                return { ...prev, notifications: { ...prev.notifications, cropAlerts: value } };
+            } else if (field === 'priceUpdates') {
+                return { ...prev, notifications: { ...prev.notifications, priceUpdates: value } };
+            } else if (field === 'weatherWarnings') {
+                return { ...prev, notifications: { ...prev.notifications, weatherWarnings: value } };
+            } else if (field === 'schemeUpdates') {
+                return { ...prev, notifications: { ...prev.notifications, schemeUpdates: value } };
+            } else if (field === 'autoDetectLocation') {
+                return { ...prev, location: { ...prev.location, autoDetect: value } };
+            } else if (field === 'locationCity') {
+                return { ...prev, location: { ...prev.location, city: value } };
+            } else if (field === 'locationState') {
+                return { ...prev, location: { ...prev.location, state: value } };
+            }
+            return prev;
+        });
+        toast.info(`Setting ${field} updated to ${value}`);
+    };
+
+    eventBus.on('fill-settings-field', handleFillField);
+
+    return () => {
+        eventBus.remove('fill-settings-field', handleFillField);
+    };
   }, []);
 
   const handleSave = () => {

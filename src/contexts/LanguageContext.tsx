@@ -1,30 +1,6 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { translateText } from '@/services/translationService';
-
-export interface Language {
-  code: string;
-  name: string;
-  nativeName: string;
-  flag: string;
-}
-
-export const languages: Language[] = [
-  { code: 'en', name: 'English', nativeName: 'English', flag: '🇺🇸' },
-  { code: 'kn', name: 'Kannada', nativeName: 'ಕನ್ನಡ', flag: '🇮🇳' },
-  { code: 'hi', name: 'Hindi', nativeName: 'हिंदी', flag: '🇮🇳' },
-  { code: 'te', name: 'Telugu', nativeName: 'తెలుగు', flag: '🇮🇳' },
-  { code: 'ta', name: 'Tamil', nativeName: 'தமிழ்', flag: '🇮🇳' }
-];
-
-interface LanguageContextType {
-  currentLanguage: Language;
-  setLanguage: (language: Language) => void;
-  translate: (text: string) => Promise<string>;
-  translateSync: (text: string) => string;
-  translationCache: Map<string, string>;
-}
-
-const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
+import { Language, languages, LanguageContext } from './language-utils';
 
 export const useLanguage = () => {
   const context = useContext(LanguageContext);
@@ -39,18 +15,34 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [translationCache, setTranslationCache] = useState<Map<string, string>>(new Map());
 
   useEffect(() => {
+    const preferredLanguageCode = localStorage.getItem('preferred-language');
     const user = JSON.parse(localStorage.getItem('agritech_current_user') || 'null');
-    if (user && user.language) {
-      const language = languages.find(lang => lang.code === user.language);
-      if (language) {
-        setCurrentLanguage(language);
-      }
+
+    let languageToSet: Language | undefined;
+
+    if (preferredLanguageCode) {
+      languageToSet = languages.find(lang => lang.code === preferredLanguageCode);
+    } else if (user && user.language) {
+      languageToSet = languages.find(lang => lang.code === user.language);
+    }
+
+    if (languageToSet) {
+      setCurrentLanguage(languageToSet);
     }
   }, []);
 
   const setLanguage = (language: Language) => {
     setCurrentLanguage(language);
+    // Update preferred-language in localStorage
     localStorage.setItem('preferred-language', language.code);
+
+    // Also update the language in agritech_current_user
+    const user = JSON.parse(localStorage.getItem('agritech_current_user') || 'null');
+    if (user) {
+      user.language = language.code;
+      localStorage.setItem('agritech_current_user', JSON.stringify(user));
+    }
+    
     // Clear cache when language changes
     setTranslationCache(new Map());
   };

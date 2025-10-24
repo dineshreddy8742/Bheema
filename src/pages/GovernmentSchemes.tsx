@@ -8,9 +8,10 @@ import { Badge } from '@/components/ui/badge';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { useToast } from '@/components/ui/use-toast';
 import { governmentSchemesService, Scheme, HelpCenter } from '@/services/governmentSchemesService';
-import { useLanguage } from '@/contexts/LanguageContext';
-import { 
-  Building2, 
+import { useLanguage } from '@/contexts/language-utils';
+import eventBus from '@/lib/eventBus';
+import {
+  Building2,
   Mic,
   Search,
   ExternalLink,
@@ -20,7 +21,8 @@ import {
   Phone,
   FileText,
   Users,
-  Banknote
+  Banknote,
+  Mic2
 } from 'lucide-react';
 
 const GovernmentSchemes = () => {
@@ -59,6 +61,22 @@ const GovernmentSchemes = () => {
     loadInitialData();
   }, [toast]);
 
+  useEffect(() => {
+    const handleFillField = (event: CustomEvent) => {
+        const data = event.detail;
+        if (data.field === 'query') {
+            setQuery(data.value);
+            searchSchemes(data.value);
+        }
+    };
+
+    eventBus.on('fill-gov-schemes-field', handleFillField);
+
+    return () => {
+        eventBus.remove('fill-gov-schemes-field', handleFillField);
+    };
+  }, []);
+
   // Search schemes
   const searchSchemes = async (searchQuery: string) => {
     try {
@@ -87,6 +105,42 @@ const GovernmentSchemes = () => {
     }
   };
 
+  const handleVoiceSearch = async () => {
+    setIsListening(true);
+    try {
+      // Start voice recognition for search
+      const recognition = new (window as any).webkitSpeechRecognition();
+      recognition.lang = 'hi-IN'; // Hindi/Kannada
+      recognition.continuous = false;
+      recognition.interimResults = false;
+
+      recognition.onresult = async (event: any) => {
+        const transcript = event.results[0][0].transcript;
+        setQuery(transcript);
+        setIsListening(false);
+
+        // Automatically trigger search after voice input
+        await searchSchemes(transcript);
+      };
+
+      recognition.onerror = () => {
+        setIsListening(false);
+        toast({
+          title: translateSync("Voice Recognition Error"),
+          description: translateSync("Could not recognize voice input. Please try again."),
+          variant: "destructive"
+        });
+      };
+
+      recognition.start();
+    } catch (error) {
+      setIsListening(false);
+      // Fallback to mock voice search for demo
+      setQuery('subsidy');
+      await searchSchemes('subsidy');
+    }
+  };
+
   const handleVoiceQuery = async () => {
     setIsListening(true);
     try {
@@ -100,7 +154,7 @@ const GovernmentSchemes = () => {
         const transcript = event.results[0][0].transcript;
         setQuery(transcript);
         setIsListening(false);
-        
+
         // Search schemes based on voice query
         await searchSchemes(transcript);
       };
@@ -183,7 +237,7 @@ const GovernmentSchemes = () => {
                   <div className="flex-1 relative">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                     <Input
-                      placeholder={translateSync("Ask: Tell me about drip irrigation subsidy")}
+                      placeholder={translateSync("Search schemes or ask questions")}
                       value={query}
                       onChange={(e) => setQuery(e.target.value)}
                       onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
@@ -208,9 +262,27 @@ const GovernmentSchemes = () => {
                     )}
                   </Button>
                   <Button
+                    onClick={handleVoiceSearch}
+                    disabled={isListening}
+                    className={`voice-button h-auto px-4 ${isListening ? 'animate-pulse-soft' : ''}`}
+                    title="Voice Search"
+                  >
+                    {isListening ? (
+                      <motion.div
+                        animate={{ scale: [1, 1.2, 1] }}
+                        transition={{ duration: 0.5, repeat: Infinity }}
+                      >
+                        <Mic2 className="h-4 w-4" />
+                      </motion.div>
+                    ) : (
+                      <Mic2 className="h-4 w-4" />
+                    )}
+                  </Button>
+                  <Button
                     onClick={handleVoiceQuery}
                     disabled={isListening}
                     className={`voice-button h-auto px-4 ${isListening ? 'animate-pulse-soft' : ''}`}
+                    title="Ask About Schemes"
                   >
                     {isListening ? (
                       <motion.div

@@ -17,8 +17,9 @@ import {
   ChevronDown,
   ChevronUp
 } from 'lucide-react';
-import { useLanguage } from '@/contexts/LanguageContext';
+import { useLanguage } from '@/contexts/language-utils';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import eventBus from '@/lib/eventBus';
 
 // Import commodity images
 import tomatoImg from '@/assets/commodities/tomato.jpg';
@@ -110,6 +111,27 @@ const MarketTrends = () => {
       fetchMarketData();
     }
   }, [selectedCommodity, selectedState, selectedDistrict]);
+
+  useEffect(() => {
+    const handleFillField = ({ field, value }: { field: string, value: string }) => {
+        if (field === 'commodity') {
+            const commodity = commodities.find(c => c.name.toLowerCase() === value.toLowerCase());
+            if (commodity) {
+                setSelectedCommodity(commodity.id);
+            }
+        } else if (field === 'state') {
+            setSelectedState(value);
+        } else if (field === 'district') {
+            setSelectedDistrict(value);
+        }
+    };
+
+    eventBus.on('fill-market-trends-field', handleFillField);
+
+    return () => {
+        eventBus.remove('fill-market-trends-field', handleFillField);
+    };
+  }, [commodities]);
 
   const loadUserProfile = () => {
     const user = JSON.parse(localStorage.getItem('agritech_current_user') || 'null');

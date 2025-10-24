@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Layout } from '@/components/Layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,13 +17,15 @@ import {
   RefreshCw,
   TrendingUp
 } from 'lucide-react';
-
-const RECOMMEND_API = "https://krishirecommend-api.onrender.com/recommend";
-const HEALTH_API = "https://krishirecommend-api.onrender.com/health";
+import { startSession, executeTask } from '@/services/apiService';
+import { useLanguage } from '@/contexts/language-utils';
+import eventBus from '@/lib/eventBus';
 
 const CropRecommendation = () => {
   const { toast } = useToast();
   
+  const { currentLanguage } = useLanguage();
+  const [sessionId, setSessionId] = useState<string | null>(null);
   const [activeMode, setActiveMode] = useState('recommendation');
   const [formData, setFormData] = useState({
     N: '',
@@ -38,39 +39,46 @@ const CropRecommendation = () => {
   });
   const [recommendation, setRecommendation] = useState<any>(null);
   const [loading, setLoading] = useState(false);
-  const [apiStatus, setApiStatus] = useState<string | null>(null);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [cropSchedule, setCropSchedule] = useState<any>(null);
   const [scheduleLoading, setScheduleLoading] = useState(false);
 
   useEffect(() => {
-    const checkAPIStatus = async () => {
+    const initSession = async () => {
       try {
-        const response = await fetch(HEALTH_API);
-        const data = await response.json();
-        if (data.status === 'healthy') {
-          setApiStatus(`✅ API Connected | Model: ${data.model_loaded ? 'Loaded' : 'Not Loaded'}`);
-        } else {
-          setApiStatus('⚠️ API Issues - Check connection');
-        }
+        const sessionData = await startSession('user-crop-rec', currentLanguage.code);
+        setSessionId(sessionData.session_id);
       } catch (error) {
-        setApiStatus('❌ API Offline - Please check deployment');
+        toast({
+          title: "Error",
+          description: "Could not connect to the agent.",
+          variant: "destructive"
+        });
       }
     };
-    checkAPIStatus();
+    initSession();
+  }, [currentLanguage.code, toast]);
+
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const target = e.target as HTMLInputElement;
+    setFormData(prev => ({ ...prev, [target.id]: target.value }));
   }, []);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const target = e.target as HTMLInputElement;
-    setFormData({ ...formData, [target.id]: target.value });
-  };
+  const handleSelectChange = useCallback((value: string) => {
+    setFormData(prev => ({ ...prev, season: value }));
+  }, []);
 
-  const handleSelectChange = (value: string) => {
-    setFormData({ ...formData, season: value });
-  };
+  const recommendCrop = useCallback(async () => {
+    if (!sessionId) {
+      toast({
+        title: "Error",
+        description: "Session not initialized. Please refresh.",
+        variant: "destructive"
+      });
+      return;
+    }
 
-  const recommendCrop = async () => {
     for (const [key, value] of Object.entries(formData)) {
       if (value === '') {
         toast({
@@ -86,38 +94,26 @@ const CropRecommendation = () => {
     setRecommendation(null);
 
     try {
-      const payload = {
-        ...formData,
-        N: parseFloat(formData.N),
-        P: parseFloat(formData.P),
-        K: parseFloat(formData.K),
-        temperature: parseFloat(formData.temperature),
-        humidity: parseFloat(formData.humidity),
-        ph: parseFloat(formData.ph),
-        rainfall: parseFloat(formData.rainfall),
-      };
+      const userInput = `N=${formData.N}, P=${formData.P}, K=${formData.K}, temp=${formData.temperature}, humidity=${formData.humidity}, ph=${formData.ph}, rainfall=${formData.rainfall}, season=${formData.season}`;
+      
+      const result = await executeTask(
+        sessionId,
+        'crop_recommendation',
+        userInput,
+        currentLanguage.code,
+        null
+      );
 
-      const response = await fetch(RECOMMEND_API, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      });
+      const recommendationAction = result.actions.find(a => a.action === 'complete_task');
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || `API error: ${response.status}`);
-      }
-
-      const data = await response.json();
-
-      if (data.success) {
-        setRecommendation(data);
+      if (recommendationAction && recommendationAction.summary) {
+        setRecommendation({ recommended_crop: recommendationAction.summary });
         toast({
           title: "Recommendation Successful",
-          description: `We recommend planting ${data.recommended_crop}.`
+          description: `We recommend planting ${recommendationAction.summary}.`
         });
       } else {
-        throw new Error(data.error || "Failed to get recommendation.");
+        throw new Error("Failed to get a valid recommendation from the agent.");
       }
     } catch (error: any) {      
       toast({
@@ -128,7 +124,7 @@ const CropRecommendation = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [sessionId, formData, toast, currentLanguage.code]);
 
   const handleScheduleSearch = () => {
     if (!searchQuery) {
@@ -198,6 +194,31 @@ const CropRecommendation = () => {
     return plans[cropName] || plans.wheat;
   };
 
+  useEffect(() => {
+    const handleFillField = ({ field, value }: { field: string, value: string }) => {
+      if (field === 'season') {
+        handleSelectChange(value);
+      } else {
+        const event = { target: { id: field, value } } as React.ChangeEvent<HTMLInputElement>;
+        handleInputChange(event);
+      }
+    };
+
+    const handleGetRecommendation = () => recommendCrop();
+
+    eventBus.on('autofill-field', handleFillField);
+    eventBus.on('fill-recommendation-field', handleFillField);
+    eventBus.on('submit-form', handleGetRecommendation);
+    eventBus.on('get-recommendation', handleGetRecommendation);
+
+    return () => {
+      eventBus.remove('autofill-field', handleFillField);
+      eventBus.remove('fill-recommendation-field', handleFillField);
+      eventBus.remove('submit-form', handleGetRecommendation);
+      eventBus.remove('get-recommendation', handleGetRecommendation);
+    };
+  }, [handleInputChange, handleSelectChange, recommendCrop]);
+
   return (
     <Layout>
       <div className="space-y-4 md:space-y-6 p-2 md:p-4 lg:p-8 bg-gradient-to-br from-green-50 to-blue-50 min-h-screen">
@@ -211,7 +232,6 @@ const CropRecommendation = () => {
             <Leaf className="h-10 w-10" />
             Crop Recommendation & Scheduling
           </h1>
-          {apiStatus && <Badge variant="outline">{apiStatus}</Badge>}
         </motion.div>
 
         <Tabs value={activeMode} onValueChange={(mode) => setActiveMode(mode as string)} className="w-full">

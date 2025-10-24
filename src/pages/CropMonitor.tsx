@@ -4,7 +4,7 @@ import { Layout } from '@/components/Layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { AlertCircle, RefreshCw, Thermometer, Droplets, Wind, Sun, Lightbulb, Leaf, CloudRain, Waves, CheckCircle } from 'lucide-react';
-import { useLanguage } from '@/contexts/LanguageContext';
+import { useLanguage } from '@/contexts/language-utils';
 
 interface SensorData {
   temperature: number;
