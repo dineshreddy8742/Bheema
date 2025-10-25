@@ -73,7 +73,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         <main 
           className={`
             flex-1 pt-16 px-4 pb-20 lg:px-8 transition-all duration-300 ease-in-out
-            ${isSidebarOpen ? 'lg:ml-80 ml-0' : 'ml-0'}
+            ${isSidebarOpen ? 'ml-80' : 'ml-0'}
           `}
         >
           <motion.div

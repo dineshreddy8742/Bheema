@@ -228,7 +228,7 @@ const LandingPage = () => {
           transition={{ duration: 1, delay: 0.3 }}
         >
           <motion.h1 
-            className="text-6xl md:text-7xl font-bold mb-6 text-white drop-shadow-lg"
+            className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold mb-6 text-white drop-shadow-lg"
             initial={{ scale: 0.8 }}
             animate={{ scale: 1 }}
             transition={{ duration: 0.8, delay: 0.5 }}
@@ -313,7 +313,7 @@ const LandingPage = () => {
               }}
               whileTap={{ scale: 0.95 }}
             >
-              <Button asChild size="lg" className="bg-gradient-to-r from-orange-500 to-amber-400 hover:from-orange-600 hover:to-amber-500 text-white text-xl px-12 py-6 rounded-full font-bold shadow-2xl border-2 border-white/20 backdrop-blur-sm transition-all duration-500">
+              <Button asChild size="lg" className="bg-gradient-to-r from-orange-500 to-amber-400 hover:from-orange-600 hover:to-amber-500 text-white text-xl px-8 py-4 sm:px-12 sm:py-6 rounded-full font-bold shadow-2xl border-2 border-white/20 backdrop-blur-sm transition-all duration-500">
                 <Link to="/signup">🚀 Start Your Journey</Link>
               </Button>
             </motion.div>
@@ -330,7 +330,7 @@ const LandingPage = () => {
               }}
               whileTap={{ scale: 0.95 }}
             >
-              <Button asChild size="lg" className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white text-xl px-10 py-6 rounded-full font-semibold shadow-xl border-2 border-white/30 backdrop-blur-sm transition-all duration-500">
+              <Button asChild size="lg" className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white text-xl px-6 py-3 sm:px-10 sm:py-6 rounded-full font-semibold shadow-xl border-2 border-white/30 backdrop-blur-sm transition-all duration-500">
                 <Link to="/login">🗝️ Continue Path</Link>
               </Button>
             </motion.div>
@@ -347,7 +347,7 @@ const LandingPage = () => {
               }}
               whileTap={{ scale: 0.95 }}
             >
-              <Button asChild size="lg" className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white text-xl px-10 py-6 rounded-full font-semibold shadow-xl border-2 border-white/25 backdrop-blur-sm transition-all duration-500">
+              <Button asChild size="lg" className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white text-xl px-6 py-3 sm:px-10 sm:py-6 rounded-full font-semibold shadow-xl border-2 border-white/25 backdrop-blur-sm transition-all duration-500">
                 <Link to="/signup">🌟 Join Adventure</Link>
               </Button>
             </motion.div>
@@ -356,7 +356,7 @@ const LandingPage = () => {
 
         {/* Features Grid */}
         <motion.div 
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16"
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-16"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.8, delay: 1.3 }}
